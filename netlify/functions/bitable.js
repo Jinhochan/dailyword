@@ -110,24 +110,34 @@ exports.handler = async function(event, context) {
             throw new Error(`获取表格信息失败: ${tableData.msg} (${tableData.code})`);
         }
 
-        // 4. 写入记录
+        // 格式化请求数据
         const requestData = JSON.parse(event.body);
+        const formattedFields = {
+            fields: {
+                "日期": requestData.fields["日期"] || '',
+                "上班时间": requestData.fields["上班时间"] || '',
+                "下班时间": requestData.fields["下班时间"] || '',
+                "备注": requestData.fields["备注"] || ''
+            }
+        };
+
+        console.log('Formatted Fields:', formattedFields);
+
+        // 写入记录
         const writeResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}/records`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${tokenData.tenant_access_token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                fields: requestData.fields
-            })
+            body: JSON.stringify(formattedFields)
         });
 
         const writeData = await writeResponse.json();
         console.log('Write Response:', writeData);
 
         if (writeData.code !== 0) {
-            throw new Error(`写入记录失败: ${writeData.msg} (${writeData.code})`);
+            throw new Error(`写入失败: ${writeData.msg} (${writeData.code})`);
         }
 
         return {
@@ -138,22 +148,15 @@ exports.handler = async function(event, context) {
             },
             body: JSON.stringify({
                 success: true,
-                data: writeData,
-                base: baseData,
-                table: tableData
+                data: writeData
             })
         };
     } catch (error) {
         console.error('Full Error Details:', {
             message: error.message,
             code: error.code,
-            msg: error.msg,
-            stack: error.stack,
-            config: {
-                app_id: CONFIG.APP_ID,
-                base_id: CONFIG.BITABLE_APP_ID,
-                table_id: CONFIG.TABLE_ID
-            }
+            requestData: event.body,
+            formattedData: formattedFields
         });
         return {
             statusCode: error.code || 500,
@@ -166,7 +169,8 @@ exports.handler = async function(event, context) {
                 error: error.message,
                 details: {
                     code: error.code,
-                    msg: error.msg
+                    msg: error.msg,
+                    fields: formattedFields
                 }
             })
         };
