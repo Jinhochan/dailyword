@@ -133,7 +133,28 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(formattedFields)
         });
 
-        const writeData = await writeResponse.json();
+        // 检查响应状态
+        if (!writeResponse.ok) {
+            const text = await writeResponse.text();
+            console.error('API Error Response:', {
+                status: writeResponse.status,
+                statusText: writeResponse.statusText,
+                body: text
+            });
+            throw new Error(`API请求失败: ${writeResponse.status} ${writeResponse.statusText}`);
+        }
+
+        let writeData;
+        try {
+            writeData = await writeResponse.json();
+        } catch (jsonError) {
+            console.error('JSON Parse Error:', {
+                error: jsonError,
+                response: await writeResponse.text()
+            });
+            throw new Error('API响应格式错误');
+        }
+
         console.log('Write Response:', writeData);
 
         if (writeData.code !== 0) {
@@ -156,20 +177,25 @@ exports.handler = async function(event, context) {
             message: error.message,
             code: error.code,
             requestData: event.body,
-            formattedData: formattedFields
+            formattedData: formattedFields,
+            stack: error.stack
         });
+
+        // 检查是否是 JSON 解析错误
+        const isJsonError = error.message.includes('invalid json');
+        
         return {
-            statusCode: error.code || 500,
+            statusCode: isJsonError ? 502 : (error.code || 500),
             headers: {
                 ...headers,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 success: false,
-                error: error.message,
+                error: isJsonError ? 'API响应格式错误' : error.message,
                 details: {
                     code: error.code,
-                    msg: error.msg,
+                    msg: error.message,
                     fields: formattedFields
                 }
             })
