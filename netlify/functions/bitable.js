@@ -44,6 +44,8 @@ exports.handler = async function(event, context) {
         };
     }
 
+    let formattedFields;
+
     try {
         console.log('Starting API call with config:', {
             app_id: CONFIG.APP_ID,
@@ -112,7 +114,7 @@ exports.handler = async function(event, context) {
 
         // 格式化请求数据
         const requestData = JSON.parse(event.body);
-        const formattedFields = {
+        formattedFields = {
             fields: {
                 "日期": requestData.fields["日期"] || '',
                 "上班时间": requestData.fields["上班时间"] || '',
@@ -130,35 +132,39 @@ exports.handler = async function(event, context) {
                 'Authorization': `Bearer ${tokenData.tenant_access_token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formattedFields)
+            body: JSON.stringify({
+                fields: formattedFields.fields
+            })
         });
 
         // 检查响应状态
         if (!writeResponse.ok) {
             const text = await writeResponse.text();
+            let errorInfo;
+            try {
+                errorInfo = JSON.parse(text);
+            } catch {
+                errorInfo = { msg: text };
+            }
             console.error('API Error Response:', {
                 status: writeResponse.status,
                 statusText: writeResponse.statusText,
-                body: text
+                body: errorInfo
             });
-            throw new Error(`API请求失败: ${writeResponse.status} ${writeResponse.statusText}`);
+            throw new Error(`API请求失败: ${errorInfo.msg || writeResponse.statusText}`);
         }
 
         let writeData;
         try {
             writeData = await writeResponse.json();
+            console.log('Write Response:', writeData);
         } catch (jsonError) {
-            console.error('JSON Parse Error:', {
-                error: jsonError,
-                response: await writeResponse.text()
-            });
+            console.error('JSON Parse Error:', jsonError);
             throw new Error('API响应格式错误');
         }
 
-        console.log('Write Response:', writeData);
-
         if (writeData.code !== 0) {
-            throw new Error(`写入失败: ${writeData.msg} (${writeData.code})`);
+            throw new Error(`写入失败: ${writeData.msg || '未知错误'} (${writeData.code})`);
         }
 
         return {
@@ -177,7 +183,7 @@ exports.handler = async function(event, context) {
             message: error.message,
             code: error.code,
             requestData: event.body,
-            formattedData: formattedFields,
+            formattedFields: formattedFields || 'Not defined',
             stack: error.stack
         });
 
@@ -196,7 +202,7 @@ exports.handler = async function(event, context) {
                 details: {
                     code: error.code,
                     msg: error.message,
-                    fields: formattedFields
+                    fields: formattedFields || null
                 }
             })
         };
