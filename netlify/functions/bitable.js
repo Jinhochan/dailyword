@@ -45,6 +45,12 @@ exports.handler = async function(event, context) {
     }
 
     try {
+        console.log('Starting API call with config:', {
+            app_id: CONFIG.APP_ID,
+            base_id: CONFIG.BITABLE_APP_ID,
+            table_id: CONFIG.TABLE_ID
+        });
+
         // 1. 获取 tenant_access_token
         const tokenResponse = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
             method: 'POST',
@@ -58,52 +64,70 @@ exports.handler = async function(event, context) {
         });
 
         const tokenData = await tokenResponse.json();
-        console.log('Token Response:', tokenData);
+        console.log('Token Response:', {
+            code: tokenData.code,
+            msg: tokenData.msg,
+            hasToken: !!tokenData.tenant_access_token
+        });
 
         if (tokenData.code !== 0) {
             throw new Error(`获取Token失败: ${tokenData.msg} (${tokenData.code})`);
         }
 
-        // 2. 写入数据
-        const requestData = JSON.parse(event.body);
-        const apiUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}/records`;
+        // 2. 先获取 Base 信息
+        const baseResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${tokenData.tenant_access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-        // 使用新版 API 格式
-        const tableResponse = await fetch(apiUrl, {
+        const baseData = await baseResponse.json();
+        console.log('Base Response:', {
+            code: baseData.code,
+            msg: baseData.msg,
+            data: baseData.data
+        });
+
+        if (baseData.code !== 0) {
+            throw new Error(`获取Base信息失败: ${baseData.msg} (${baseData.code})`);
+        }
+
+        // 3. 获取表格信息
+        const tableResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${tokenData.tenant_access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const tableData = await tableResponse.json();
+        console.log('Table Info:', tableData);
+
+        if (tableData.code !== 0) {
+            throw new Error(`获取表格信息失败: ${tableData.msg} (${tableData.code})`);
+        }
+
+        // 4. 写入记录
+        const requestData = JSON.parse(event.body);
+        const writeResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}/records`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${tokenData.tenant_access_token}`,
-                'Content-Type': 'application/json',
-                'X-Lark-App-Id': CONFIG.APP_ID  // 添加应用 ID
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "record": {  // 使用 record 包装
-                    "fields": requestData.fields
-                }
+                fields: requestData.fields
             })
         });
 
-        const responseData = await tableResponse.json();
-        console.log('Write Response:', responseData);
+        const writeData = await writeResponse.json();
+        console.log('Write Response:', writeData);
 
-        if (responseData.code !== 0) {
-            // 获取错误详情
-            const errorDetails = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${tokenData.tenant_access_token}`,
-                    'Content-Type': 'application/json',
-                    'X-Lark-App-Id': CONFIG.APP_ID
-                }
-            }).then(res => res.json());
-
-            console.error('Error Details:', {
-                response: responseData,
-                details: errorDetails,
-                token: tokenData.tenant_access_token.substring(0, 10) + '...'
-            });
-
-            throw new Error(`写入失败: ${responseData.msg} (${responseData.code})`);
+        if (writeData.code !== 0) {
+            throw new Error(`写入记录失败: ${writeData.msg} (${writeData.code})`);
         }
 
         return {
@@ -114,11 +138,23 @@ exports.handler = async function(event, context) {
             },
             body: JSON.stringify({
                 success: true,
-                data: responseData
+                data: writeData,
+                base: baseData,
+                table: tableData
             })
         };
     } catch (error) {
-        console.error('Detailed Error:', error);
+        console.error('Full Error Details:', {
+            message: error.message,
+            code: error.code,
+            msg: error.msg,
+            stack: error.stack,
+            config: {
+                app_id: CONFIG.APP_ID,
+                base_id: CONFIG.BITABLE_APP_ID,
+                table_id: CONFIG.TABLE_ID
+            }
+        });
         return {
             statusCode: error.code || 500,
             headers: {
@@ -130,8 +166,7 @@ exports.handler = async function(event, context) {
                 error: error.message,
                 details: {
                     code: error.code,
-                    msg: error.msg,
-                    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                    msg: error.msg
                 }
             })
         };
