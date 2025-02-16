@@ -5,19 +5,13 @@ const CONFIG = {
     APP_ID: "cli_a7249c33d178500c",
     APP_SECRET: "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx",
     BITABLE_APP_ID: "WpNmb3hN7aWmfwsHfLxcbgFtny9",
-    TABLE_ID: "tblqV42gg6Vwu8MC",
-    COLUMNS: {
-        DATE: "日期",
-        START_TIME: "上班时间",
-        END_TIME: "下班时间",
-        NOTES: "备注"
-    }
+    TABLE_ID: "tblqV42gg6Vwu8MC"
 };
 
 // 添加 CORS 处理
 const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
@@ -44,16 +38,8 @@ exports.handler = async function(event, context) {
         };
     }
 
-    let formattedFields;
-
     try {
-        console.log('Starting API call with config:', {
-            app_id: CONFIG.APP_ID,
-            base_id: CONFIG.BITABLE_APP_ID,
-            table_id: CONFIG.TABLE_ID
-        });
-
-        // 1. 获取 tenant_access_token
+        // 1. 获取 token
         const tokenResponse = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
             method: 'POST',
             headers: {
@@ -66,66 +52,13 @@ exports.handler = async function(event, context) {
         });
 
         const tokenData = await tokenResponse.json();
-        console.log('Token Response:', {
-            code: tokenData.code,
-            msg: tokenData.msg,
-            hasToken: !!tokenData.tenant_access_token
-        });
-
+        
         if (tokenData.code !== 0) {
-            throw new Error(`获取Token失败: ${tokenData.msg} (${tokenData.code})`);
+            throw new Error(`获取Token失败: ${tokenData.msg}`);
         }
 
-        // 2. 先获取 Base 信息
-        const baseResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${tokenData.tenant_access_token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const baseData = await baseResponse.json();
-        console.log('Base Response:', {
-            code: baseData.code,
-            msg: baseData.msg,
-            data: baseData.data
-        });
-
-        if (baseData.code !== 0) {
-            throw new Error(`获取Base信息失败: ${baseData.msg} (${baseData.code})`);
-        }
-
-        // 3. 获取表格信息
-        const tableResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${tokenData.tenant_access_token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const tableData = await tableResponse.json();
-        console.log('Table Info:', tableData);
-
-        if (tableData.code !== 0) {
-            throw new Error(`获取表格信息失败: ${tableData.msg} (${tableData.code})`);
-        }
-
-        // 格式化请求数据
+        // 2. 写入数据
         const requestData = JSON.parse(event.body);
-        formattedFields = {
-            fields: {
-                "日期": requestData.fields["日期"] || '',
-                "上班时间": requestData.fields["上班时间"] || '',
-                "下班时间": requestData.fields["下班时间"] || '',
-                "备注": requestData.fields["备注"] || ''
-            }
-        };
-
-        console.log('Formatted Fields:', formattedFields);
-
-        // 写入记录
         const writeResponse = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${CONFIG.BITABLE_APP_ID}/tables/${CONFIG.TABLE_ID}/records`, {
             method: 'POST',
             headers: {
@@ -133,38 +66,14 @@ exports.handler = async function(event, context) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                fields: formattedFields.fields
+                fields: requestData.fields
             })
         });
 
-        // 检查响应状态
-        if (!writeResponse.ok) {
-            const text = await writeResponse.text();
-            let errorInfo;
-            try {
-                errorInfo = JSON.parse(text);
-            } catch {
-                errorInfo = { msg: text };
-            }
-            console.error('API Error Response:', {
-                status: writeResponse.status,
-                statusText: writeResponse.statusText,
-                body: errorInfo
-            });
-            throw new Error(`API请求失败: ${errorInfo.msg || writeResponse.statusText}`);
-        }
-
-        let writeData;
-        try {
-            writeData = await writeResponse.json();
-            console.log('Write Response:', writeData);
-        } catch (jsonError) {
-            console.error('JSON Parse Error:', jsonError);
-            throw new Error('API响应格式错误');
-        }
-
+        const writeData = await writeResponse.json();
+        
         if (writeData.code !== 0) {
-            throw new Error(`写入失败: ${writeData.msg || '未知错误'} (${writeData.code})`);
+            throw new Error(`写入失败: ${writeData.msg}`);
         }
 
         return {
@@ -178,32 +87,18 @@ exports.handler = async function(event, context) {
                 data: writeData
             })
         };
-    } catch (error) {
-        console.error('Full Error Details:', {
-            message: error.message,
-            code: error.code,
-            requestData: event.body,
-            formattedFields: formattedFields || 'Not defined',
-            stack: error.stack
-        });
 
-        // 检查是否是 JSON 解析错误
-        const isJsonError = error.message.includes('invalid json');
-        
+    } catch (error) {
+        console.error('Error:', error);
         return {
-            statusCode: isJsonError ? 502 : (error.code || 500),
+            statusCode: 500,
             headers: {
                 ...headers,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 success: false,
-                error: isJsonError ? 'API响应格式错误' : error.message,
-                details: {
-                    code: error.code,
-                    msg: error.message,
-                    fields: formattedFields || null
-                }
+                error: error.message
             })
         };
     }
