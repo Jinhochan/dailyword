@@ -1,0 +1,11 @@
+{
+  "setting": {
+    "es6": true,
+    "minified": true
+  },
+  "appid": "cli_a7249c33d178500c",
+  "projectname": "签到",
+  "blocks": [
+    "block/index"
+  ]
+}

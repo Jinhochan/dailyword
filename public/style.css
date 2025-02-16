@@ -1,0 +1,164 @@
+:root {
+    --ios-blue: #007AFF;
+    --ios-gray: #8E8E93;
+    --ios-light-gray: #F2F2F7;
+    --ios-border: #C6C6C8;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--ios-light-gray);
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    color: #000;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 20px 0;
+}
+
+.date-display, .time-display {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    font-size: 17px;
+    color: #000;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.time-display div {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ios-light-gray);
+}
+
+.time-display div:last-child {
+    border-bottom: none;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+button {
+    padding: 12px 24px;
+    font-size: 17px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--ios-blue);
+    color: white;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    touch-action: manipulation;
+}
+
+button:active {
+    opacity: 0.7;
+}
+
+button:disabled {
+    background-color: var(--ios-gray);
+    opacity: 0.5;
+}
+
+.notes {
+    margin: 20px 0;
+    background: white;
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+textarea {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    resize: none;
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+}
+
+textarea:focus {
+    outline: none;
+}
+
+#submitBtn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+    .container {
+        max-width: 100%;
+        padding: 15px;
+    }
+
+    button {
+        min-width: 120px;
+    }
+
+    .date-display, .time-display {
+        margin: 8px 0;
+    }
+
+    textarea {
+        height: 120px;
+    }
+}
+
+/* iOS风格的状态栏适配 */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .container {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* 防止元素被选中 */
+button, .date-display, .time-display {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.submit-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.submit-buttons button {
+    width: 100%;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+#submitToGroupBtn {
+    background-color: var(--ios-blue);
+}
+
+#submitToTableBtn {
+    background-color: #34C759;  /* iOS 绿色 */
+} 
