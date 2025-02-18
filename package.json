@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "netlify dev"
+    "dev": "netlify dev",
+    "serve": "npx http-server public -p 3000"
   },
   "dependencies": {
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "netlify-cli": "^12.0.0"
+    "netlify-cli": "^12.0.0",
+    "http-server": "^14.1.1"
   }
 } 
