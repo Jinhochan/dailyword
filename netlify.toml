@@ -1,0 +1,33 @@
+[build]
+  base = "/"
+  publish = "public"
+  functions = "netlify/functions"
+
+[dev]
+  publish = "public"
+  port = 8888
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 添加函数访问权限
+[[headers]]
+  for = "/.netlify/functions/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+
+# 添加函数配置
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["node-fetch"]
+
+# 添加环境变量
+[build.environment]
+  NODE_VERSION = "16"
+  FEISHU_APP_ID = "cli_a7249c33d178500c"
+  FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
+  FEISHU_CHAT_ID = "oc_a8759bffe43899c4d4f35457c4827c6b" 

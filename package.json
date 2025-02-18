@@ -1,0 +1,14 @@
+{
+  "name": "daka-app",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^12.0.0"
+  }
+} 

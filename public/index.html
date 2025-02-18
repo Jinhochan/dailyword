@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <title>打卡系统</title>
+    <script src='https://sf1-scmcdn-cn.feishucdn.com/obj/feishu-static/op/fe/devtools_frontend/remote-debug-0.0.1-alpha.6.js'></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
+</head>
+<body>
+    <div class="container">
+        <h1>打卡系统</h1>
+        <div class="date-display">
+            当前日期：<span id="currentDate"></span>
+        </div>
+        <div class="time-display">
+            <div>开始时间：<span id="startTime">--:--:--</span></div>
+            <div>结束时间：<span id="endTime">--:--:--</span></div>
+        </div>
+        <div class="buttons">
+            <button id="startBtn">📝 打卡</button>
+            <button id="endBtn" disabled>🏃 下班</button>
+        </div>
+        <div class="notes">
+            <textarea id="notes" placeholder="请输入备注..."></textarea>
+        </div>
+        <div class="submit-buttons">
+            <button id="submitToGroupBtn" disabled>💬 提交到飞书群</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
