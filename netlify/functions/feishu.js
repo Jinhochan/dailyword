@@ -1,8 +1,9 @@
 const fetch = require('node-fetch');
 
-// 飞书应用凭证
-const APP_ID = 'your_app_id';
-const APP_SECRET = 'your_app_secret';
+// 从环境变量获取飞书应用凭证
+const APP_ID = process.env.FEISHU_APP_ID;
+const APP_SECRET = process.env.FEISHU_APP_SECRET;
+const CHAT_ID = process.env.FEISHU_CHAT_ID;
 
 // 获取飞书访问令牌
 async function getAccessToken() {
@@ -29,23 +30,24 @@ async function getAccessToken() {
 // 发送消息到飞书群
 async function sendMessage(message) {
     try {
-        const accessToken = await getAccessToken();
-        const response = await fetch('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id', {
+        const response = await fetch('https://open.feishu.cn/open-apis/bot/v2/hook/c128ef19-33c1-4dce-89d9-fb2145d9a53c', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                receive_id: "your_chat_id", // 替换为你的群聊 ID
-                msg_type: "text",
-                content: JSON.stringify({
-                    text: message
-                })
+                "msg_type": "text",  // 必须指定消息类型
+                "content": {
+                    "text": message
+                }
             })
         });
         
-        return await response.json();
+        const result = await response.json();
+        if (result.code !== 0) {
+            throw new Error(result.msg || '发送消息失败');
+        }
+        return result;
     } catch (error) {
         console.error('发送消息失败:', error);
         throw error;
