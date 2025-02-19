@@ -209,12 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
     bitleTableButton.style.backgroundColor = '#34C759';
     bitleTableButton.innerHTML = '📊 发送到多维表格';
     bitleTableButton.onclick = async () => {
-        const notes = document.getElementById('notes').value;
-        const date = document.getElementById('currentDate').textContent;
-        const startTime = document.getElementById('startTime').textContent;
-        const endTime = document.getElementById('endTime').textContent;
-        
         try {
+            const notes = document.getElementById('notes').value;
+            const date = document.getElementById('currentDate').textContent;
+            const startTime = document.getElementById('startTime').textContent;
+            const endTime = document.getElementById('endTime').textContent;
+            
             const response = await fetch('/.netlify/functions/bitable', {
                 method: 'POST',
                 headers: {
@@ -228,8 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+
             const result = await response.json();
-            
+            console.log('API响应:', result);
+
             if (result.code !== 0) {
                 throw new Error(result.msg || '发送失败');
             }
@@ -249,7 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             alert('已发送到多维表格！');
         } catch (error) {
-            console.error('Error details:', error);
+            console.error('发送到多维表格失败:', {
+                message: error.message,
+                error: error
+            });
             alert(`发送到多维表格失败：${error.message}`);
         }
     };
