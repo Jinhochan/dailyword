@@ -168,26 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         message: fullMessage
                     })
                 });
-
-                const result = await response.json();
-                if (result.code !== 0 && !result.ok) {
-                    throw new Error(result.msg || result.error || '发送失败');
-                }
             }
 
-            // 发送成功后清除本地存储
-            localStorage.removeItem('dakaData');
-            
-            // 重置界面
-            startDateTime = null;
-            endDateTime = null;
-            document.getElementById('startTime').textContent = '--:--:--';
-            document.getElementById('endTime').textContent = '--:--:--';
-            document.getElementById('notes').value = '';
-            startBtn.disabled = false;
-            endBtn.disabled = true;
-            submitToGroupBtn.disabled = true;
-            
+            const result = await response.json();
+            if (result.code !== 0 && !result.ok) {
+                throw new Error(result.msg || result.error || '发送失败');
+            }
+
+            // 发送成功后不再清除本地存储和重置界面
             alert('已发送到飞书群！');
         } catch (error) {
             console.error('Error details:', error);
@@ -244,6 +232,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.error) {
                 throw new Error(result.error);
             }
+            
+            // 发送成功后再清除本地存储和重置界面
+            localStorage.removeItem('dakaData');
+            
+            // 重置界面
+            startDateTime = null;
+            endDateTime = null;
+            document.getElementById('startTime').textContent = '--:--:--';
+            document.getElementById('endTime').textContent = '--:--:--';
+            document.getElementById('notes').value = '';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('endBtn').disabled = true;
+            document.getElementById('submitToGroupBtn').disabled = true;
             
             alert('已发送到多维表格！');
         } catch (error) {
