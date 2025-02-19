@@ -200,7 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
     debugDiv.style.marginTop = '20px';
     debugDiv.style.display = 'flex';
     debugDiv.style.gap = '12px';
-    debugDiv.innerHTML = `
+    debugDiv.style.flexDirection = 'column'; // 改为纵向排列
+
+    // 创建第一行按钮
+    const firstRow = document.createElement('div');
+    firstRow.style.display = 'flex';
+    firstRow.style.gap = '12px';
+    firstRow.innerHTML = `
         <button onclick="localStorage.removeItem('dakaData'); location.reload();" style="flex: 1; background-color: var(--ios-blue);">
             🗑️ 清除数据并刷新
         </button>
@@ -208,5 +214,67 @@ document.addEventListener('DOMContentLoaded', () => {
             🔍 查看存储数据
         </button>
     `;
+
+    // 创建多维表格测试按钮
+    const bitleTableButton = document.createElement('button');
+    bitleTableButton.style.width = '100%';
+    bitleTableButton.style.backgroundColor = '#34C759'; // iOS 绿色
+    bitleTableButton.innerHTML = '📊 发送到多维表格';
+    bitleTableButton.onclick = async () => {
+        const notes = document.getElementById('notes').value;
+        const date = document.getElementById('currentDate').textContent;
+        const startTime = document.getElementById('startTime').textContent;
+        const endTime = document.getElementById('endTime').textContent;
+        
+        try {
+            // 1. 获取访问令牌
+            const tokenResponse = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "app_id": "cli_a7249c33d178500c",
+                    "app_secret": "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
+                })
+            });
+
+            const tokenData = await tokenResponse.json();
+            if (tokenData.code !== 0) {
+                throw new Error(`获取Token失败: ${tokenData.msg}`);
+            }
+
+            // 2. 发送数据到多维表格
+            const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/WpNmb3hN7aWmfwsHfLxcbgFtny9/tables/tblqV42gg6Vwu8MC/records`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${tokenData.tenant_access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "fields": {
+                        "日期": date,
+                        "上班时间": startTime,
+                        "下班时间": endTime,
+                        "备注": notes
+                    }
+                })
+            });
+
+            const result = await response.json();
+            if (result.code !== 0) {
+                throw new Error(result.msg || '创建记录失败');
+            }
+            
+            alert('已发送到多维表格！');
+        } catch (error) {
+            console.error('Error details:', error);
+            alert(`发送到多维表格失败：${error.message}`);
+        }
+    };
+
+    // 组装所有按钮
+    debugDiv.appendChild(firstRow);
+    debugDiv.appendChild(bitleTableButton);
     document.querySelector('.container').appendChild(debugDiv);
 }); 
