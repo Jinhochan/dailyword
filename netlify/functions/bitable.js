@@ -85,52 +85,35 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json; charset=utf-8',
-                'X-Tt-Access-Token': accessToken  // 添加额外的认证头
+                'Content-Type': 'application/json; charset=utf-8'
             },
             body: JSON.stringify(requestBody)
         });
 
-        const responseText = await response.text();
-        console.log('原始响应:', responseText);
-        
-        try {
-            const result = JSON.parse(responseText);
-            console.log('多维表格响应:', result);
+        const result = await response.json();
+        console.log('多维表格响应:', result);
 
-            if (result.code !== 0) {
-                throw new Error(`API错误: ${result.msg} (${result.code})`);
-            }
-
-            return {
-                statusCode: 200,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                },
-                body: JSON.stringify(result)
-            };
-        } catch (parseError) {
-            console.error('解析响应失败:', parseError);
-            throw new Error(`解析响应失败: ${responseText}`);
-        }
-    } catch (error) {
-        console.error('处理请求失败:', {
-            message: error.message,
-            stack: error.stack,
-            time: new Date().toISOString()
-        });
-
+        // 即使有错误也返回 200 状态码，让前端处理具体的错误
         return {
-            statusCode: 500,
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        };
+    } catch (error) {
+        console.error('处理请求失败:', error);
+        return {
+            statusCode: 200,  // 改为 200
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Headers': 'Content-Type'
             },
             body: JSON.stringify({ 
-                error: error.message,
-                details: error.stack,
-                time: new Date().toISOString()
+                code: 91403,
+                msg: error.message,
+                data: {}
             })
         };
     }
