@@ -1,11 +1,10 @@
 const fetch = require('node-fetch');
 
-// 飞书应用凭证
-const APP_ID = "cli_a7249c33d178500c";
-const APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx";
-const APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9";
-const TABLE_ID = "tblqV42gg6Vwu8MC";
-const USER_ID = "ou_560adde5070154c961cb81c4ceb40c65";
+// 从环境变量获取配置
+const APP_ID = process.env.FEISHU_APP_ID;
+const APP_SECRET = process.env.FEISHU_APP_SECRET;
+const APP_TOKEN = process.env.BITABLE_APP_TOKEN;
+const TABLE_ID = process.env.BITABLE_TABLE_ID;
 
 // 获取飞书访问令牌
 async function getAccessToken() {
@@ -85,7 +84,7 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json; charset=utf-8'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(requestBody)
         });
@@ -93,7 +92,10 @@ exports.handler = async function(event, context) {
         const result = await response.json();
         console.log('多维表格响应:', result);
 
-        // 即使有错误也返回 200 状态码，让前端处理具体的错误
+        if (result.code === 91403) {
+            console.error('权限错误，请检查应用权限设置');
+        }
+
         return {
             statusCode: 200,
             headers: {
@@ -105,14 +107,14 @@ exports.handler = async function(event, context) {
     } catch (error) {
         console.error('处理请求失败:', error);
         return {
-            statusCode: 200,  // 改为 200
+            statusCode: 200,
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Headers': 'Content-Type'
             },
             body: JSON.stringify({ 
                 code: 91403,
-                msg: error.message,
+                msg: '权限错误，请检查应用权限设置',
                 data: {}
             })
         };
