@@ -28,6 +28,9 @@
 # 添加环境变量
 [build.environment]
   NODE_VERSION = "16"
+
+# 添加飞书应用的环境变量
+[context.production.environment]
   FEISHU_APP_ID = "cli_a7249c33d178500c"
   FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
   FEISHU_CHAT_ID = "oc_a8759bffe43899c4d4f35457c4827c6b"
