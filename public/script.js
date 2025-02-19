@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 创建多维表格测试按钮
     const bitleTableButton = document.createElement('button');
     bitleTableButton.style.width = '100%';
-    bitleTableButton.style.backgroundColor = '#34C759'; // iOS 绿色
+    bitleTableButton.style.backgroundColor = '#34C759';
     bitleTableButton.innerHTML = '📊 发送到多维表格';
     bitleTableButton.onclick = async () => {
         const notes = document.getElementById('notes').value;
@@ -229,8 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
-            if (result.error) {
-                throw new Error(result.error);
+            
+            if (result.code !== 0) {
+                throw new Error(result.msg || '发送失败');
             }
             
             // 发送成功后再清除本地存储和重置界面
