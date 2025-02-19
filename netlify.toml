@@ -35,4 +35,22 @@
   FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
   FEISHU_CHAT_ID = "oc_a8759bffe43899c4d4f35457c4827c6b"
   BITABLE_APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9"
+  BITABLE_TABLE_ID = "tblqV42gg6Vwu8MC"
+
+[context.deploy-preview.environment]
+  FEISHU_APP_ID = "cli_a7249c33d178500c"
+  FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
+  BITABLE_APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9"
+  BITABLE_TABLE_ID = "tblqV42gg6Vwu8MC"
+
+[context.branch-deploy.environment]
+  FEISHU_APP_ID = "cli_a7249c33d178500c"
+  FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
+  BITABLE_APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9"
+  BITABLE_TABLE_ID = "tblqV42gg6Vwu8MC"
+
+[context.dev.environment]
+  FEISHU_APP_ID = "cli_a7249c33d178500c"
+  FEISHU_APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx"
+  BITABLE_APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9"
   BITABLE_TABLE_ID = "tblqV42gg6Vwu8MC" 
