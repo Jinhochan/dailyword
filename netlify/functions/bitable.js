@@ -62,38 +62,42 @@ exports.handler = async function(event, context) {
         console.log('开始处理请求...');
         // 获取访问令牌
         const accessToken = await getAccessToken();
-        console.log('成功获取访问令牌');
+        console.log('成功获取访问令牌:', accessToken);
 
         // 解析请求数据
         const { date, startTime, endTime, notes } = JSON.parse(event.body);
         console.log('请求数据:', { date, startTime, endTime, notes });
 
-        // 构建请求URL
-        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`;
-        console.log('请求URL:', url);
+        // 构建请求体
+        const requestBody = {
+            fields: {
+                "日期": date,
+                "上班时间": startTime,
+                "下班时间": endTime,
+                "备注": notes || ''
+            }
+        };
+        console.log('请求体:', JSON.stringify(requestBody, null, 2));
 
         // 发送到多维表格
-        console.log('正在发送数据到多维表格...');
+        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`;
+        console.log('请求URL:', url);
+        console.log('使用的Token:', accessToken);
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                fields: {
-                    "日期": date,
-                    "上班时间": startTime,
-                    "下班时间": endTime,
-                    "备注": notes
-                }
-            })
+            body: JSON.stringify(requestBody)
         });
 
         const result = await response.json();
         console.log('多维表格响应:', result);
 
         if (result.code !== 0) {
+            console.error('创建记录失败:', result);
             throw new Error(`创建记录失败: ${result.msg}`);
         }
 
@@ -115,7 +119,8 @@ exports.handler = async function(event, context) {
             },
             body: JSON.stringify({ 
                 error: error.message,
-                details: error.stack
+                details: error.stack,
+                time: new Date().toISOString()
             })
         };
     }
