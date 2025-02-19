@@ -5,12 +5,13 @@ const APP_ID = "cli_a7249c33d178500c";
 const APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx";
 const APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9";
 const TABLE_ID = "tblqV42gg6Vwu8MC";
+const USER_ID = "ou_560adde5070154c961cb81c4ceb40c65";
 
 // 获取飞书访问令牌
 async function getAccessToken() {
     try {
         console.log('正在获取访问令牌...');
-        const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+        const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -27,7 +28,7 @@ async function getAccessToken() {
         if (data.code !== 0) {
             throw new Error(`获取访问令牌失败: ${data.msg}`);
         }
-        return data.tenant_access_token;
+        return data.app_access_token;
     } catch (error) {
         console.error('获取访问令牌失败:', error);
         throw error;
@@ -60,28 +61,27 @@ exports.handler = async function(event, context) {
 
     try {
         console.log('开始处理请求...');
-        // 获取访问令牌
         const accessToken = await getAccessToken();
         console.log('成功获取访问令牌:', accessToken);
 
-        // 解析请求数据
         const { date, startTime, endTime, notes } = JSON.parse(event.body);
-        console.log('请求数据:', { date, startTime, endTime, notes });
-
-        // 构建请求体
+        
+        // 构建 URL 时添加 user_id_type 参数
+        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records?user_id_type=open_id`;
+        
         const requestBody = {
             fields: {
                 "日期": date,
                 "上班时间": startTime,
                 "下班时间": endTime,
                 "备注": notes || ''
-            }
+            },
+            user_id_type: "open_id",  // 添加用户 ID 类型
+            user_id: USER_ID  // 添加用户 ID
         };
-        console.log('请求体:', JSON.stringify(requestBody, null, 2));
 
-        // 发送到多维表格
-        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`;
         console.log('请求URL:', url);
+        console.log('请求体:', JSON.stringify(requestBody, null, 2));
         console.log('使用的Token:', accessToken);
 
         const response = await fetch(url, {
