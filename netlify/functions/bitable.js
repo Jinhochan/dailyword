@@ -1,18 +1,10 @@
 const fetch = require('node-fetch');
 
-// 在文件开头添加环境变量检查
-console.log('环境变量检查:', {
-    APP_ID: process.env.FEISHU_APP_ID,
-    APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
-    APP_TOKEN: process.env.BITABLE_APP_TOKEN,
-    TABLE_ID: process.env.BITABLE_TABLE_ID
-});
-
-// 从环境变量获取配置
-const APP_ID = process.env.FEISHU_APP_ID;
-const APP_SECRET = process.env.FEISHU_APP_SECRET;
-const APP_TOKEN = process.env.BITABLE_APP_TOKEN;
-const TABLE_ID = process.env.BITABLE_TABLE_ID;
+// 直接使用飞书应用凭证
+const APP_ID = "cli_a7249c33d178500c";
+const APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx";
+const APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9";
+const TABLE_ID = "tblqV42gg6Vwu8MC";
 
 // 获取飞书访问令牌
 async function getAccessToken() {
@@ -68,13 +60,6 @@ exports.handler = async function(event, context) {
 
     try {
         console.log('开始处理请求...');
-        console.log('环境变量:', {
-            APP_ID: process.env.FEISHU_APP_ID,
-            APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
-            APP_TOKEN: process.env.BITABLE_APP_TOKEN,
-            TABLE_ID: process.env.BITABLE_TABLE_ID
-        });
-
         const accessToken = await getAccessToken();
         console.log('成功获取访问令牌:', accessToken);
 
@@ -107,10 +92,7 @@ exports.handler = async function(event, context) {
         const result = await response.json();
         console.log('多维表格响应:', result);
 
-        if (result.code === 91403) {
-            console.error('权限错误，请检查应用权限设置');
-        }
-
+        // 返回原始响应，让前端处理错误
         return {
             statusCode: 200,
             headers: {
@@ -120,15 +102,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(result)
         };
     } catch (error) {
-        console.error('处理请求失败:', {
-            error: error,
-            env: {
-                APP_ID: process.env.FEISHU_APP_ID,
-                APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
-                APP_TOKEN: process.env.BITABLE_APP_TOKEN,
-                TABLE_ID: process.env.BITABLE_TABLE_ID
-            }
-        });
+        console.error('处理请求失败:', error);
         return {
             statusCode: 200,
             headers: {
@@ -136,8 +110,8 @@ exports.handler = async function(event, context) {
                 'Access-Control-Allow-Headers': 'Content-Type'
             },
             body: JSON.stringify({ 
-                code: 91403,
-                msg: '权限错误，请检查应用权限设置',
+                code: -1,
+                msg: error.message,
                 data: {}
             })
         };
