@@ -11,7 +11,7 @@ const USER_ID = "ou_560adde5070154c961cb81c4ceb40c65";
 async function getAccessToken() {
     try {
         console.log('正在获取访问令牌...');
-        const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal', {
+        const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -28,7 +28,7 @@ async function getAccessToken() {
         if (data.code !== 0) {
             throw new Error(`获取访问令牌失败: ${data.msg}`);
         }
-        return data.app_access_token;
+        return data.tenant_access_token;
     } catch (error) {
         console.error('获取访问令牌失败:', error);
         throw error;
@@ -85,34 +85,35 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json; charset=utf-8',
+                'X-Tt-Access-Token': accessToken  // 添加额外的认证头
             },
             body: JSON.stringify(requestBody)
         });
 
-        // 检查 HTTP 状态码
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('HTTP错误:', response.status, errorText);
-            throw new Error(`HTTP错误: ${response.status} ${errorText}`);
+        const responseText = await response.text();
+        console.log('原始响应:', responseText);
+        
+        try {
+            const result = JSON.parse(responseText);
+            console.log('多维表格响应:', result);
+
+            if (result.code !== 0) {
+                throw new Error(`API错误: ${result.msg} (${result.code})`);
+            }
+
+            return {
+                statusCode: 200,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                body: JSON.stringify(result)
+            };
+        } catch (parseError) {
+            console.error('解析响应失败:', parseError);
+            throw new Error(`解析响应失败: ${responseText}`);
         }
-
-        const result = await response.json();
-        console.log('多维表格响应:', result);
-
-        if (result.code !== 0) {
-            console.error('API错误:', result);
-            throw new Error(`API错误: ${result.msg}`);
-        }
-
-        return {
-            statusCode: 200,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            body: JSON.stringify(result)
-        };
     } catch (error) {
         console.error('处理请求失败:', {
             message: error.message,
