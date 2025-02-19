@@ -66,23 +66,20 @@ exports.handler = async function(event, context) {
 
         const { date, startTime, endTime, notes } = JSON.parse(event.body);
         
-        // 构建 URL 时添加 user_id_type 参数
-        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records?user_id_type=open_id`;
-        
+        // 构建请求体
         const requestBody = {
             fields: {
                 "日期": date,
                 "上班时间": startTime,
                 "下班时间": endTime,
                 "备注": notes || ''
-            },
-            user_id_type: "open_id",  // 添加用户 ID 类型
-            user_id: USER_ID  // 添加用户 ID
+            }
         };
 
+        // 发送到多维表格
+        const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`;
         console.log('请求URL:', url);
         console.log('请求体:', JSON.stringify(requestBody, null, 2));
-        console.log('使用的Token:', accessToken);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -93,12 +90,19 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(requestBody)
         });
 
+        // 检查 HTTP 状态码
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('HTTP错误:', response.status, errorText);
+            throw new Error(`HTTP错误: ${response.status} ${errorText}`);
+        }
+
         const result = await response.json();
         console.log('多维表格响应:', result);
 
         if (result.code !== 0) {
-            console.error('创建记录失败:', result);
-            throw new Error(`创建记录失败: ${result.msg}`);
+            console.error('API错误:', result);
+            throw new Error(`API错误: ${result.msg}`);
         }
 
         return {
@@ -110,7 +114,12 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(result)
         };
     } catch (error) {
-        console.error('处理请求失败:', error);
+        console.error('处理请求失败:', {
+            message: error.message,
+            stack: error.stack,
+            time: new Date().toISOString()
+        });
+
         return {
             statusCode: 500,
             headers: {
