@@ -1,10 +1,10 @@
 const fetch = require('node-fetch');
 
-// 从环境变量获取配置
-const APP_ID = process.env.FEISHU_APP_ID;
-const APP_SECRET = process.env.FEISHU_APP_SECRET;
-const APP_TOKEN = process.env.BITABLE_APP_TOKEN;
-const TABLE_ID = process.env.BITABLE_TABLE_ID;
+// 飞书应用凭证
+const APP_ID = "cli_a7249c33d178500c";
+const APP_SECRET = "gj5ERSbWa85rVLsHGLMFlevQeyioOyNx";
+const APP_TOKEN = "WpNmb3hN7aWmfwsHfLxcbgFtny9";
+const TABLE_ID = "tblqV42gg6Vwu8MC";
 
 // 获取飞书访问令牌
 async function getAccessToken() {
@@ -21,35 +21,12 @@ async function getAccessToken() {
         });
         
         const data = await response.json();
+        if (data.code !== 0) {
+            throw new Error(data.msg || '获取访问令牌失败');
+        }
         return data.tenant_access_token;
     } catch (error) {
         console.error('获取访问令牌失败:', error);
-        throw error;
-    }
-}
-
-// 发送数据到多维表格
-async function sendToBitable(fields) {
-    try {
-        const accessToken = await getAccessToken();
-        const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                fields: fields
-            })
-        });
-        
-        const result = await response.json();
-        if (result.code !== 0) {
-            throw new Error(result.msg || '创建记录失败');
-        }
-        return result;
-    } catch (error) {
-        console.error('发送到多维表格失败:', error);
         throw error;
     }
 }
@@ -63,14 +40,34 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const { date, startTime, endTime, notes } = JSON.parse(event.body);
-        const result = await sendToBitable({
-            "日期": date,
-            "上班时间": startTime,
-            "下班时间": endTime,
-            "备注": notes
-        });
+        // 获取访问令牌
+        const accessToken = await getAccessToken();
         
+        // 解析请求数据
+        const { date, startTime, endTime, notes } = JSON.parse(event.body);
+
+        // 发送到多维表格
+        const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fields: {
+                    "日期": date,
+                    "上班时间": startTime,
+                    "下班时间": endTime,
+                    "备注": notes
+                }
+            })
+        });
+
+        const result = await response.json();
+        if (result.code !== 0) {
+            throw new Error(result.msg || '创建记录失败');
+        }
+
         return {
             statusCode: 200,
             headers: {
@@ -80,6 +77,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(result)
         };
     } catch (error) {
+        console.error('Error:', error);
         return {
             statusCode: 500,
             headers: {
