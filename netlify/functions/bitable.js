@@ -1,5 +1,13 @@
 const fetch = require('node-fetch');
 
+// 在文件开头添加环境变量检查
+console.log('环境变量检查:', {
+    APP_ID: process.env.FEISHU_APP_ID,
+    APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
+    APP_TOKEN: process.env.BITABLE_APP_TOKEN,
+    TABLE_ID: process.env.BITABLE_TABLE_ID
+});
+
 // 从环境变量获取配置
 const APP_ID = process.env.FEISHU_APP_ID;
 const APP_SECRET = process.env.FEISHU_APP_SECRET;
@@ -60,6 +68,13 @@ exports.handler = async function(event, context) {
 
     try {
         console.log('开始处理请求...');
+        console.log('环境变量:', {
+            APP_ID: process.env.FEISHU_APP_ID,
+            APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
+            APP_TOKEN: process.env.BITABLE_APP_TOKEN,
+            TABLE_ID: process.env.BITABLE_TABLE_ID
+        });
+
         const accessToken = await getAccessToken();
         console.log('成功获取访问令牌:', accessToken);
 
@@ -105,7 +120,15 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(result)
         };
     } catch (error) {
-        console.error('处理请求失败:', error);
+        console.error('处理请求失败:', {
+            error: error,
+            env: {
+                APP_ID: process.env.FEISHU_APP_ID,
+                APP_SECRET: process.env.FEISHU_APP_SECRET ? '存在' : '不存在',
+                APP_TOKEN: process.env.BITABLE_APP_TOKEN,
+                TABLE_ID: process.env.BITABLE_TABLE_ID
+            }
+        });
         return {
             statusCode: 200,
             headers: {
