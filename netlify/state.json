@@ -1,0 +1,19 @@
+{
+	"geolocation": {
+		"data": {
+			"city": "Shenzhen",
+			"country": {
+				"code": "CN",
+				"name": "China"
+			},
+			"subdivision": {
+				"code": "GD",
+				"name": "Guangdong"
+			},
+			"timezone": "Asia/Shanghai",
+			"latitude": 22.5455,
+			"longitude": 114.0683
+		},
+		"timestamp": 1759416279051
+	}
+}

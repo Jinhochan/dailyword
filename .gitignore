@@ -1,0 +1,24 @@
+# Local Netlify folder
+.netlify
+
+# Node modules
+node_modules/
+
+# Test files
+test_*.html
+test_*.js
+*_test.js
+*_test.html
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

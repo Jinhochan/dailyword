@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景渐变 -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#007AFF" />
+      <stop offset="100%" stop-color="#34C759" />
+    </linearGradient>
+    <!-- 阴影效果 -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.2" />
+    </filter>
+  </defs>
+  
+  <!-- 圆角矩形背景 -->
+  <rect x="10" y="10" width="160" height="160" rx="40" fill="url(#bgGradient)" filter="url(#shadow)" />
+  
+  <!-- 打卡图标 -->
+  <g transform="translate(45, 45)" fill="white">
+    <!-- 日历外框 -->
+    <rect x="5" y="10" width="80" height="80" rx="8" fill="white" />
+    
+    <!-- 日历顶部 -->
+    <rect x="5" y="10" width="80" height="20" rx="8" fill="#FF3B30" />
+    
+    <!-- 日历挂钩 -->
+    <rect x="25" y="5" width="10" height="10" rx="2" fill="white" />
+    <rect x="55" y="5" width="10" height="10" rx="2" fill="white" />
+    
+    <!-- 打卡勾选标记 -->
+    <path d="M35 60 L45 70 L75 40" stroke="#34C759" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

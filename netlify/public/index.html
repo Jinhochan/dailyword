@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <title>打卡系统</title>
+    <meta name="description" content="简易打卡系统 - 记录上下班时间，支持飞书群、微信推送和多维表格">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="app-icon.svg">
+    <link rel="icon" type="image/svg+xml" href="app-icon.svg">
+</head>
+<body>
+    <div class="container">
+        <h1>打卡系统</h1>
+        <div class="date-display">
+            <div>上班日期：<span id="startDate">----</span></div>
+            <div>下班日期：<span id="endDate">----</span></div>
+        </div>
+        <div class="time-display">
+            <div>开始时间：<span id="startTime">--:--:--</span></div>
+            <div>结束时间：<span id="endTime">--:--:--</span></div>
+        </div>
+        <div class="buttons">
+            <button id="startBtn">📝 打卡</button>
+            <button id="endBtn" disabled>🏃 下班</button>
+        </div>
+        <div class="notes">
+            <textarea id="notes" placeholder="请输入备注..."></textarea>
+        </div>
+        <!-- 新增微信推送文本框 -->
+        <div class="wechat-notes">
+            <textarea id="wechatNotes" placeholder="请输入要推送的微信消息内容..."></textarea>
+        </div>
+        <div class="submit-buttons">
+            <button id="submitToGroupBtn" disabled>💬 飞书群</button>
+            <!-- 新增微信推送按钮 -->
+            <button id="submitToWechatBtn" disabled>📱 微信</button>
+            <!-- 新增飞书多维表格按钮 -->
+            <button id="submitToTableBtn" disabled>📊 多维表格</button>
+        </div>
+        
+        <!-- 调试按钮区域（仅本地开发显示） -->
+        <div class="debug-section" id="debugSection" style="display:none;">
+            <h3>调试工具</h3>
+            <div class="debug-buttons">
+                <button id="clearDataBtn">🗑️ 清除数据并刷新</button>
+                <button id="viewDataBtn">🔍 查看存储数据</button>
+            </div>
+        </div>
+        <script>
+          // 仅在本地开发环境显示调试工具
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.getElementById('debugSection').style.display = 'block';
+          }
+        </script>
+    </div>
+    <script src="script.js"></script>
+    
+    <!-- 注册Service Worker，增强离线体验 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('Service Worker 注册成功:', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('Service Worker 注册失败:', error);
+            });
+        });
+      }
+    </script>
+</body>
+</html>
