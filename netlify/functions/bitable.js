@@ -5,7 +5,6 @@ const APP_ID = process.env.FEISHU_APP_ID;
 const APP_SECRET = process.env.FEISHU_APP_SECRET;
 const APP_TOKEN = process.env.BITABLE_APP_TOKEN || 'WpNmb3hN7aWmfwsHfLxcbgFtny9';
 const TABLE_ID = process.env.BITABLE_TABLE_ID || 'tblqV42gg6Vwu8MC';
-const TABLE_ID = process.env.BITABLE_TABLE_ID;
 
 // 错误码映射（根据飞书多维表格API文档）
 const BITABLE_ERROR_CODES = {
