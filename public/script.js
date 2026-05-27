@@ -194,7 +194,7 @@ function handleEndClick() {
     var startDateEl = document.getElementById('startDate');
     if (startDateEl && endDateEl) {
         var startDateText = startDateEl.textContent;
-        if (startDateText !== '\u00a0' && startDateText !== '----' && endDateTime.getHours() >= 0 && endDateTime.getHours() < 5) {
+        if (startDateText !== '\u00a0' && startDateText !== '----' && endDateTime.getHours() >= 0 && endDateTime.getHours() < 8) {
             var parts = startDateText.includes('/') ? startDateText.split('/') : startDateText.split('-');
             if (parts.length === 3) {
                 var nextDay = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
