@@ -6,12 +6,10 @@ let endDateTime = null;
 let startBtn = null;
 let endBtn = null;
 let submitToGroupBtn = null;
-let submitToWechatBtn = null;
 let submitToTableBtn = null;
 let clearDataBtn = null;
 let viewDataBtn = null;
 let notesTextarea = null;
-let wechatNotesTextarea = null;
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
@@ -21,18 +19,15 @@ document.addEventListener('DOMContentLoaded', function() {
     startBtn = document.getElementById('startBtn');
     endBtn = document.getElementById('endBtn');
     submitToGroupBtn = document.getElementById('submitToGroupBtn');
-    submitToWechatBtn = document.getElementById('submitToWechatBtn');
-    submitToTableBtn = document.getElementById('submitToTableBtn');
+        submitToTableBtn = document.getElementById('submitToTableBtn');
     clearDataBtn = document.getElementById('clearDataBtn');
     viewDataBtn = document.getElementById('viewDataBtn');
     notesTextarea = document.getElementById('notes');
-    wechatNotesTextarea = document.getElementById('wechatNotes');
-
+    
     console.log('DOMContentLoaded - DOM元素获取完成:', {
         startBtn: !!startBtn,
         endBtn: !!endBtn,
         submitToGroupBtn: !!submitToGroupBtn,
-        submitToWechatBtn: !!submitToWechatBtn,
         submitToTableBtn: !!submitToTableBtn
     });
 
@@ -55,13 +50,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 初始化微信消息自动保存功能
-    setupAutoSaveForWechatNotes();
 
     // 绑定按钮事件 - 使用 click 事件（移动端浏览器自动将 click 转为 tap）
     if (startBtn) startBtn.addEventListener('click', handleStartClick);
     if (endBtn) endBtn.addEventListener('click', handleEndClick);
     if (submitToGroupBtn) submitToGroupBtn.addEventListener('click', handleSubmitToGroup);
-    if (submitToWechatBtn) submitToWechatBtn.addEventListener('click', handleSubmitToWechat);
     if (submitToTableBtn) submitToTableBtn.addEventListener('click', handleSubmitToTable);
     if (clearDataBtn) clearDataBtn.addEventListener('click', handleClearData);
     if (viewDataBtn) viewDataBtn.addEventListener('click', handleViewData);
@@ -70,10 +63,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (notesTextarea) {
         notesTextarea.addEventListener('focus', handleTextareaFocus);
         notesTextarea.addEventListener('blur', saveToLocalStorage);
-    }
-    if (wechatNotesTextarea) {
-        wechatNotesTextarea.addEventListener('focus', handleTextareaFocus);
-        wechatNotesTextarea.addEventListener('blur', saveToLocalStorage);
     }
     
     console.log('DOMContentLoaded - 页面初始化完成');
@@ -368,14 +357,12 @@ function handleEndClick() {
     // 使用全局变量控制按钮状态
     if (startBtn) startBtn.disabled = true;
     if (submitToGroupBtn) submitToGroupBtn.disabled = false;
-    if (submitToWechatBtn) submitToWechatBtn.disabled = false;
     if (submitToTableBtn) submitToTableBtn.disabled = false;
     
     // 增加日志记录以便调试
     console.log('下班打卡成功 - 按钮状态更新:', {
         startBtnDisabled: startBtn?.disabled,
         submitToGroupBtnDisabled: submitToGroupBtn?.disabled,
-        submitToWechatBtnDisabled: submitToWechatBtn?.disabled,
         submitToTableBtnDisabled: submitToTableBtn?.disabled,
         endDateTime: endDateTime
     });
@@ -460,90 +447,6 @@ async function handleSubmitToGroup() {
     }
 }
 
-// 处理微信提交按钮点击
-async function handleSubmitToWechat() {
-    const elements = validateAndGetElements();
-    if (!elements) return;
-    
-    const { startTime, endTime, notes } = elements;
-    const wechatNotes = document.getElementById('wechatNotes').value;
-    const startDate = document.getElementById('startDate').textContent;
-    const endDate = document.getElementById('endDate').textContent;
-    
-    if (!wechatNotes) {
-        showToast('请输入要推送的微信消息内容！', 'error');
-        return;
-    }
-    
-    // 构建文本格式的数据
-    const data = {
-        startDate,
-        endDate,
-        startTime,
-        endTime,
-        notes,
-        wechatNotes
-    };
-    
-    // 增强日志记录，验证数据格式
-    console.log('微信提交数据 - 文本格式验证:', {
-        startDate: { value: startDate, type: typeof startDate },
-        endDate: { value: endDate, type: typeof endDate },
-        startTime: { value: startTime, type: typeof startTime },
-        endTime: { value: endTime, type: typeof endTime }
-    });
-    
-    // 优化API URL配置，适应不同的运行环境
-    let apiUrl = '';
-    
-    try {
-        // 检查是否在Netlify环境中运行
-        if (window.location.hostname.includes('.netlify.app')) {
-            // 生产环境 - 使用相对路径
-            apiUrl = '/.netlify/functions/wechat';
-        } else if (window.location.hostname === 'localhost') {
-            // 本地开发环境 - 使用localhost
-            apiUrl = `${window.location.protocol}//${window.location.hostname}:${window.location.port || 3000}/.netlify/functions/wechat`;
-        } else {
-            // 其他环境 - 尝试三种可能的本地开发端口
-            const ports = [3000, 9000, 8888];
-            for (const port of ports) {
-                try {
-                    // 先尝试连接判断是否可用
-                    const testUrl = `http://localhost:${port}/.netlify/functions/wechat`;
-                    await fetch(testUrl, { method: 'OPTIONS' });
-                    apiUrl = testUrl;
-                    break;
-                } catch (e) {
-                    // 端口不可用，继续尝试下一个
-                    continue;
-                }
-            }
-            
-            // 如果没有找到可用端口，默认使用3000
-            if (!apiUrl) {
-                apiUrl = 'http://localhost:3000/.netlify/functions/wechat';
-            }
-        }
-        
-        console.log('使用的API URL:', apiUrl);
-        const result = await sendApiRequest(apiUrl, data, document.getElementById('submitToWechatBtn'));
-        
-        if (result && result.success) {
-            showToast('已发送到微信！', 'success');
-            
-            // 清除本地存储并重置UI
-            localStorage.removeItem('dailyWordData');
-            resetUI();
-        } else if (result && result.offline) {
-            // 离线模式下，不要清除数据，让用户可以稍后重试
-            console.log('离线模式 - 数据已保存');
-        }
-    } catch (error) {
-        console.error('提交微信时发生异常:', error);
-        showToast(`提交失败：${error.message || '未知错误'}`);
-    }
-}
 
 // 处理多维表格提交按钮点击 - 根据飞书多维表格API文档优化
 async function handleSubmitToTable() {
@@ -812,8 +715,7 @@ function saveToLocalStorage() {
             startDateTime: startDateTime ? startDateTime.toISOString() : null,
             endDateTime: endDateTime ? endDateTime.toISOString() : null,
             notes: notesTextarea ? notesTextarea.value : '',
-            wechatNotes: wechatNotesTextarea ? wechatNotesTextarea.value : ''
-        };
+            };
         
         console.log('saveToLocalStorage - 要保存的数据:', data);
         
@@ -827,16 +729,6 @@ function saveToLocalStorage() {
     }
 }
 
-// 添加微信消息内容自动保存事件监听
-function setupAutoSaveForWechatNotes() {
-    const wechatNotesElement = document.getElementById('wechatNotes');
-    if (wechatNotesElement) {
-        // 用户输入时自动保存
-        wechatNotesElement.addEventListener('input', saveToLocalStorage);
-        // 失去焦点时也保存一次
-        wechatNotesElement.addEventListener('blur', saveToLocalStorage);
-    }
-}
 
 // 从本地存储加载数据
 function loadFromLocalStorage() {
@@ -866,9 +758,6 @@ function loadFromLocalStorage() {
                 notesTextarea.value = parsedData.notes;
             }
             
-            if (wechatNotesTextarea && parsedData.wechatNotes) {
-                wechatNotesTextarea.value = parsedData.wechatNotes;
-            }
             
             // 更新UI显示
             const startDateElement = document.getElementById('startDate');
@@ -893,22 +782,19 @@ function loadFromLocalStorage() {
                     startBtn.disabled = true;
                     endBtn.disabled = false;
                     submitToGroupBtn.disabled = true;
-                    submitToWechatBtn.disabled = true;
-                    submitToTableBtn.disabled = true;
+                            submitToTableBtn.disabled = true;
                 } else if (startDateTime && endDateTime) {
                     // 有完整的打卡记录
                     startBtn.disabled = true;
                     endBtn.disabled = true;
                     submitToGroupBtn.disabled = false;
-                    submitToWechatBtn.disabled = false;
-                    submitToTableBtn.disabled = false;
+                        submitToTableBtn.disabled = false;
                 } else {
                     // 没有打卡记录
                     startBtn.disabled = false;
                     endBtn.disabled = true;
                     submitToGroupBtn.disabled = true;
-                    submitToWechatBtn.disabled = true;
-                    submitToTableBtn.disabled = true;
+                            submitToTableBtn.disabled = true;
                 }
                 
                 console.log('loadFromLocalStorage - 按钮状态更新:', {
@@ -924,8 +810,7 @@ function loadFromLocalStorage() {
                 startBtn.disabled = false;
                 endBtn.disabled = true;
                 submitToGroupBtn.disabled = true;
-                submitToWechatBtn.disabled = true;
-                submitToTableBtn.disabled = true;
+                    submitToTableBtn.disabled = true;
             }
         }
     } catch (error) {
@@ -957,7 +842,6 @@ function resetUI() {
             submitToGroupBtn.disabled = true;
         }
         if (submitToWechatBtn) {
-            submitToWechatBtn.disabled = true;
         }
         if (submitToTableBtn) {
             submitToTableBtn.disabled = true;
@@ -988,9 +872,6 @@ function resetUI() {
             notesTextarea.value = '';
         }
         
-        if (wechatNotesTextarea) {
-            wechatNotesTextarea.value = '';
-        }
         
         // 记录重置状态
         console.log('resetUI - UI状态重置成功，按钮状态:', {
