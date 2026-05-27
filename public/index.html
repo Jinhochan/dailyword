@@ -4,63 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>打卡系统</title>
-    <meta name="description" content="简易打卡系统 - 记录上下班时间，支持飞书群和多维表格">
+    <meta name="description" content="简易打卡系统 - 记录上下班时间">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <link rel="icon" type="image/svg+xml" href="app-icon.svg">
 </head>
 <body>
-    <div class="container">
-        <h1>打卡系统</h1>
-        <div class="date-display">
-            <div>上班日期：<span id="startDate">----</span></div>
-            <div>下班日期：<span id="endDate">----</span></div>
-        </div>
-        <div class="time-display">
-            <div>开始时间：<span id="startTime">--:--:--</span></div>
-            <div>结束时间：<span id="endTime">--:--:--</span></div>
-        </div>
-        <div class="buttons">
-            <button id="startBtn">📝 打卡</button>
-            <button id="endBtn" disabled>🏃 下班</button>
-        </div>
-        <div class="notes">
-            <textarea id="notes" placeholder="请输入备注..."></textarea>
-        </div>
-        <div class="submit-buttons">
-            <button id="submitToGroupBtn" disabled>💬 飞书群</button>
-            <button id="submitToTableBtn" disabled>📊 多维表格</button>
-        </div>
+    <div class="app">
+        <header class="header">
+            <h1>打卡</h1>
+            <p class="subtitle" id="todayDate"></p>
+        </header>
 
-        <!-- 工具区域 -->
-        <div class="debug-section" id="debugSection" style="display:none;">
-            <h3>工具</h3>
-            <div class="debug-buttons">
-                <button id="clearDataBtn">🗑️ 清除数据并刷新</button>
-                <button id="viewDataBtn">🔍 查看存储数据</button>
+        <section class="time-cards">
+            <div class="time-card" id="startCard">
+                <div class="time-label">上班</div>
+                <div class="time-value" id="startTime">--:--</div>
+                <div class="time-date" id="startDate">&nbsp;</div>
             </div>
-        </div>
-        <script>
-          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            document.getElementById('debugSection').style.display = 'block';
-          }
-        </script>
+            <div class="time-card" id="endCard">
+                <div class="time-label">下班</div>
+                <div class="time-value" id="endTime">--:--</div>
+                <div class="time-date" id="endDate">&nbsp;</div>
+            </div>
+        </section>
+
+        <section class="duration-bar" id="durationBar" style="display:none;">
+            <div class="duration-label">工作时长</div>
+            <div class="duration-value" id="durationValue">--</div>
+        </section>
+
+        <section class="action-buttons">
+            <button class="btn btn-start" id="startBtn">
+                <span class="btn-icon">&#9711;</span>
+                <span>上班打卡</span>
+            </button>
+            <button class="btn btn-end" id="endBtn" disabled>
+                <span class="btn-icon">&#9632;</span>
+                <span>下班打卡</span>
+            </button>
+        </section>
+
+        <section class="notes">
+            <textarea id="notes" placeholder="备注（可选）" rows="2"></textarea>
+        </section>
+
+        <section class="submit-buttons">
+            <button class="btn btn-submit" id="submitToGroupBtn" disabled>飞书群</button>
+            <button class="btn btn-submit" id="submitToTableBtn" disabled>多维表格</button>
+        </section>
+
+        <section class="tools-section" id="debugSection" style="display:none;">
+            <div class="tools-toggle" id="toolsToggle">
+                <span>工具</span>
+                <span class="chevron">&#9662;</span>
+            </div>
+            <div class="tools-content" id="toolsContent">
+                <button class="btn btn-tool" id="clearDataBtn">清除数据并刷新</button>
+                <button class="btn btn-tool" id="viewDataBtn">查看存储数据</button>
+            </div>
+        </section>
     </div>
+
     <script src="script.js"></script>
+    <script>
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        document.getElementById('debugSection').style.display = '';
+      }
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/service-worker.js')
-            .then(function(registration) {
-              console.log('Service Worker 注册成功:', registration.scope);
-            })
-            .catch(function(error) {
-              console.log('Service Worker 注册失败:', error);
-            });
+            .then(function(r) { console.log('SW registered:', r.scope); })
+            .catch(function(e) { console.log('SW failed:', e); });
         });
       }
     </script>
