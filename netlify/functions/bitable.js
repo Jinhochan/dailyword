@@ -259,22 +259,22 @@ exports.handler = async function(event, context) {
             // 对于对象类型（包括日期对象），保持原样
         }
         
-        // 特别处理日期字段，确保正确格式
+        // 特别处理日期字段，确保正确格式（表格字段为纯文本类型）
         const dateFields = ['日期', '上班日期', '下班日期'];
         for (const field of dateFields) {
             if (fields[field] && typeof fields[field] === 'object' && fields[field].type === 'date' && fields[field].value) {
-                // 保持日期对象格式不变，这是飞书多维表格能识别的格式
-                console.log(`保持${field}的日期对象格式:`, fields[field]);
+                // 将日期对象转换为纯文本字符串
+                const v = fields[field].value;
+                fields[field] = v.year + '-' + v.month + '-' + v.day;
+                console.log(`转换${field}为文本:`, fields[field]);
             } else if (fields[field] && typeof fields[field] !== 'string') {
-                // 如果不是标准的日期对象，尝试转换为ISO日期字符串
                 try {
                     const date = new Date(fields[field]);
                     if (!isNaN(date.getTime())) {
-                        fields[field] = date.toISOString().split('T')[0]; // YYYY-MM-DD格式
-                        console.log(`转换${field}为ISO日期字符串:`, fields[field]);
+                        fields[field] = date.toISOString().split('T')[0];
                     }
                 } catch (e) {
-                    console.log(`无法转换${field}为日期:`, fields[field]);
+                    fields[field] = String(fields[field]);
                 }
             }
         }
