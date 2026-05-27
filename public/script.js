@@ -236,9 +236,13 @@ async function handleSubmitToGroup() {
     if (!elements) return;
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
-    var message = '📅 ' + startDateText + ' ' + elements.startTime + ' → ' + endDateText + ' ' + elements.endTime;
-    if (elements.notes) message += '\n📝 ' + elements.notes;
-    var data = { message: message };
+    var data = {
+        startDate: startDateText,
+        endDate: endDateText,
+        startTime: elements.startTime,
+        endTime: elements.endTime,
+        notes: elements.notes
+    };
     var apiUrl = '';
     if (window.location.hostname.includes('.netlify.app')) {
         apiUrl = '/.netlify/functions/feishu';
