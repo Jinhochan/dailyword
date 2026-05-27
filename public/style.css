@@ -1,230 +1,338 @@
-/* 苹果风格基础样式 */
+/* Design System */
 :root {
-    --apple-blue: #007AFF;
-    --apple-red: #FF3B30;
-    --apple-green: #34C759;
-    --apple-gray: #8E8E93;
-    --apple-light-gray: #F2F2F7;
-    --apple-dark-gray: #1C1C1E;
-    --apple-background: #FFFFFF;
-    --apple-text: #000000;
-    --apple-secondary-text: #6E6E73;
-    --apple-border-radius: 10px;
-    --apple-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    --apple-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #86868b;
+    --blue: #007aff;
+    --green: #30d158;
+    --red: #ff453a;
+    --gray: #8e8e93;
+    --border: rgba(0,0,0,0.06);
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
 }
 
-/* 全局样式 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
-    font-family: var(--apple-font);
-    background-color: var(--apple-background);
-    color: var(--apple-text);
-    margin: 0;
-    padding: 0;
-    line-height: 1.5;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    min-height: 100dvh;
 }
 
-.container {
-    max-width: 500px;
+.app {
+    max-width: 420px;
     margin: 0 auto;
-    padding: 20px;
-    background-color: var(--apple-background);
-    border-radius: var(--apple-border-radius);
-    box-shadow: var(--apple-shadow);
+    padding: 0 20px;
+    padding-top: env(safe-area-inset-top, 20px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-h1 {
-    font-size: 28px;
-    font-weight: 600;
+/* Header */
+.header {
     text-align: center;
-    margin-bottom: 24px;
-    color: var(--apple-text);
+    padding: 32px 0 8px;
 }
 
-h3 {
-    font-size: 18px;
+.header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-weight: 400;
+}
+
+/* Time Cards */
+.time-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.time-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.time-card.active {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green), var(--shadow);
+}
+
+.time-label {
+    font-size: 13px;
     font-weight: 500;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: var(--apple-text);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
 }
 
-/* 日期和时间显示 */
-.date-display, .time-display {
-    background-color: var(--apple-light-gray);
-    border-radius: var(--apple-border-radius);
-    padding: 16px;
-    margin-bottom: 16px;
+.time-value {
+    font-size: 32px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    color: var(--text);
+    line-height: 1;
+}
+
+.time-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    min-height: 16px;
+}
+
+/* Duration Bar */
+.duration-bar {
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
 }
 
-.date-display div, .time-display div {
-    flex: 1;
-    font-size: 16px;
-    color: var(--apple-secondary-text);
+.duration-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
-.date-display span, .time-display span {
-    display: block;
+.duration-value {
     font-size: 18px;
-    font-weight: 500;
-    color: var(--apple-text);
-    margin-top: 4px;
+    font-weight: 600;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
 }
 
-/* 按钮样式 */
-.buttons, .submit-buttons, .debug-buttons {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
+/* Buttons */
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
-button {
-    background-color: var(--apple-blue);
-    color: white;
+.btn {
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
     border: none;
-    border-radius: 20px;
-    padding: 12px 20px;
-    font-size: 16px;
-    font-weight: 500;
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    flex: 1;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 122, 255, 0.3);
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
-button:hover {
-    background-color: #0071EB;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 122, 255, 0.4);
+.btn:active {
+    transform: scale(0.97);
 }
 
-button:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0, 122, 255, 0.4);
-}
-
-button:disabled {
-    background-color: var(--apple-gray);
+.btn:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
-    opacity: 0.7;
-    box-shadow: none;
+    transform: none;
 }
 
-#startBtn {
-    background-color: var(--apple-green);
-    box-shadow: 0 2px 5px rgba(52, 199, 89, 0.3);
-}
-
-#startBtn:hover {
-    background-color: #30B955;
-    box-shadow: 0 4px 8px rgba(52, 199, 89, 0.4);
-}
-
-#endBtn {
-    background-color: var(--apple-red);
-    box-shadow: 0 2px 5px rgba(255, 59, 48, 0.3);
-}
-
-#endBtn:hover {
-    background-color: #E6352B;
-    box-shadow: 0 4px 8px rgba(255, 59, 48, 0.4);
-}
-
-#clearDataBtn {
-    background-color: var(--apple-gray);
-    box-shadow: 0 2px 5px rgba(142, 142, 147, 0.3);
-}
-
-#clearDataBtn:hover {
-    background-color: #7D7D82;
-    box-shadow: 0 4px 8px rgba(142, 142, 147, 0.4);
-}
-
-/* 表单元素 */
-.notes {
-    margin-bottom: 16px;
-}
-
-textarea {
-    width: 100%;
-    height: 80px;
-    padding: 12px;
-    border: 1px solid var(--apple-light-gray);
-    border-radius: var(--apple-border-radius);
-    font-family: var(--apple-font);
+.btn-icon {
     font-size: 16px;
+    line-height: 1;
+}
+
+.btn-start {
+    background: var(--green);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(48, 209, 88, 0.3);
+}
+
+.btn-start:hover:not(:disabled) {
+    background: #2db84e;
+}
+
+.btn-end {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 69, 58, 0.3);
+}
+
+.btn-end:hover:not(:disabled) {
+    background: #e63e34;
+}
+
+/* Notes */
+.notes textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    font-family: var(--font);
+    font-size: 15px;
+    color: var(--text);
     resize: none;
-    box-sizing: border-box;
+    outline: none;
+    box-shadow: var(--shadow);
     transition: border-color 0.2s ease;
 }
 
-textarea:focus {
-    outline: none;
-    border-color: var(--apple-blue);
-    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+.notes textarea::placeholder {
+    color: var(--text-secondary);
 }
 
-/* 调试区域 */
-.debug-section {
-    margin-top: 30px;
-    padding-top: 16px;
-    border-top: 1px solid var(--apple-light-gray);
+.notes textarea:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12), var(--shadow);
 }
 
-/* 加载状态指示器样式 */
+/* Submit Buttons */
+.submit-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.btn-submit {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: #0066d6;
+}
+
+/* Tools Section */
+.tools-section {
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.tools-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tools-toggle .chevron {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+}
+
+.tools-toggle.open .chevron {
+    transform: rotate(180deg);
+}
+
+.tools-content {
+    display: none;
+    gap: 8px;
+    padding-bottom: 16px;
+}
+
+.tools-content.show {
+    display: flex;
+}
+
+.btn-tool {
+    flex: 1;
+    background: var(--card);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+.btn-tool:hover {
+    background: var(--bg);
+}
+
+/* Loading spinner */
 .spinner {
     display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
     border-radius: 50%;
     border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite;
-    margin-right: 8px;
+    animation: spin 0.7s linear infinite;
+    margin-right: 6px;
 }
 
-/* 加载状态样式 */
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .loading {
-    position: relative;
     pointer-events: none;
     opacity: 0.7;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Toast通知样式 */
+/* Toast */
 .toast-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     z-index: 9999;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    pointer-events: none;
 }
 
 .toast {
     padding: 12px 20px;
-    margin-bottom: 10px;
-    border-radius: 14px;
-    color: white;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
     font-weight: 500;
     opacity: 0;
-    transform: translateY(-20px);
-    transition: all 0.3s ease-in-out;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    max-width: 300px;
+    transform: translateY(-12px);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    max-width: 320px;
+    text-align: center;
+    pointer-events: auto;
 }
 
 .toast.show {
@@ -232,155 +340,25 @@ textarea:focus {
     transform: translateY(0);
 }
 
-.toast.success {
-    background-color: rgba(52, 199, 89, 0.95);
-}
+.toast.success { background: rgba(48, 209, 88, 0.95); }
+.toast.error { background: rgba(255, 69, 58, 0.95); }
+.toast.info { background: rgba(0, 122, 255, 0.95); }
 
-.toast.error {
-    background-color: rgba(255, 59, 48, 0.95);
-}
-
-.toast.info {
-    background-color: rgba(0, 122, 255, 0.95);
-}
-
-/* 响应式设计 - 基础移动适配 */
-@media (max-width: 600px) {
-    .container {
-        padding: 16px;
-        margin: 0;
-        max-width: 100%;
-        min-height: 100vh;
-        box-shadow: none;
-        border-radius: 0;
-        box-sizing: border-box;
-    }
-    
-    h1 {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-    
-    .buttons, .submit-buttons {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    button {
-        width: 100%;
-        padding: 14px 20px;
-        font-size: 17px;
-        border-radius: 22px;
-    }
-    
-    .date-display, .time-display {
-        flex-direction: column;
-        gap: 10px;
-        padding: 14px;
-    }
-    
-    .date-display div, .time-display div {
-        font-size: 14px;
-    }
-    
-    .date-display span, .time-display span {
-        font-size: 16px;
-    }
-    
-    textarea {
-        height: 90px;
-        padding: 14px;
-        font-size: 17px;
-    }
-    
-    /* 触摸友好的交互样式 */
-    button {
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
-    }
-    
-    button:active {
-        transform: scale(0.98);
-    }
-    
-    /* 优化toast通知在移动端的显示 */
-    .toast-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        align-items: center;
-    }
-    
-    .toast {
-        max-width: 100%;
-        width: 100%;
-        text-align: center;
-    }
-}
-
-/* 小屏幕手机适配 */
-@media (max-width: 375px) {
-    .container {
-        padding: 12px;
-    }
-    
-    h1 {
-        font-size: 22px;
-    }
-    
-    button {
-        padding: 12px 16px;
-        font-size: 16px;
-    }
-    
-    textarea {
-        height: 80px;
-    }
-}
-
-/* 横屏模式适配 */
-@media (max-height: 400px) {
-    .container {
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    
-    .date-display, .time-display {
-        flex-direction: row;
-        gap: 15px;
-    }
-    
-    textarea {
-        height: 70px;
-    }
-    
-    .debug-section {
-        margin-top: 15px;
-    }
-}
-
-/* 深色模式支持 */
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
     :root {
-        --apple-background: #1C1C1E;
-        --apple-text: #FFFFFF;
-        --apple-secondary-text: #AEAEB2;
-        --apple-light-gray: #2C2C2E;
+        --bg: #000000;
+        --card: #1c1c1e;
+        --text: #f5f5f7;
+        --text-secondary: #98989d;
+        --border: rgba(255,255,255,0.08);
+        --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
     }
-    
-    .container {
-        background-color: var(--apple-background);
-    }
-    
-    textarea {
-        background-color: var(--apple-light-gray);
-        color: var(--apple-text);
-        border-color: #3A3A3C;
-    }
-    
-    textarea::placeholder {
-        color: var(--apple-secondary-text);
-    }
+}
+
+/* Small phones */
+@media (max-width: 350px) {
+    .app { padding: 0 16px; }
+    .time-value { font-size: 28px; }
+    .btn { padding: 14px 16px; font-size: 14px; }
 }
