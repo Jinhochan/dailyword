@@ -2,7 +2,7 @@
 let startDateTime = null;
 let endDateTime = null;
 
-// 垫资记录数组
+// 消费记录数组
 let advanceRecords = [];
 
 // 全局DOM元素引用
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (clearDataBtn) clearDataBtn.addEventListener('click', handleClearData);
     if (viewDataBtn) viewDataBtn.addEventListener('click', handleViewData);
 
-    // 垫资按钮事件
+    // 消费按钮事件
     if (addAdvanceBtn) addAdvanceBtn.addEventListener('click', handleAddAdvance);
     if (advanceAmountInput) {
         advanceAmountInput.addEventListener('keydown', function(e) {
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ============ 垫资管理 ============
+// ============ 消费管理 ============
 
 function handleAddAdvance() {
     var amountStr = advanceAmountInput.value.trim();
@@ -132,7 +132,7 @@ function handleAddAdvance() {
 
     renderAdvanceList();
     saveToLocalStorage();
-    showToast('垫资已添加: ¥' + amount.toFixed(2), 'success');
+    showToast('消费已添加: ¥' + amount.toFixed(2), 'success');
 }
 
 function handleDeleteAdvance(index) {
@@ -146,7 +146,7 @@ function renderAdvanceList() {
     if (!advanceListEl) return;
 
     if (advanceRecords.length === 0) {
-        advanceListEl.innerHTML = '<div class="advance-empty">暂无垫资记录</div>';
+        advanceListEl.innerHTML = '<div class="advance-empty">暂无消费记录</div>';
     } else {
         var html = '';
         for (var i = 0; i < advanceRecords.length; i++) {
@@ -188,7 +188,7 @@ function getAdvanceSummaryText() {
         total += r.amount;
         lines += '  ' + (i + 1) + '. ¥' + r.amount.toFixed(2) + ' - ' + r.purpose + ' (' + r.time + ')\n';
     }
-    lines += '  垫资合计: ¥' + total.toFixed(2);
+    lines += '  消费合计: ¥' + total.toFixed(2);
     return lines;
 }
 
@@ -381,10 +381,10 @@ async function handleSubmitToGroup() {
         message += '备注：' + elements.notes + '\n';
     }
 
-    // 追加垫资信息
+    // 追加消费信息
     var advanceText = getAdvanceSummaryText();
     if (advanceText) {
-        message += '\n垫资记录：\n' + advanceText;
+        message += '\n💰消费：\n' + advanceText;
     }
 
     var data = {
@@ -422,7 +422,7 @@ async function handleSubmitToTable() {
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
 
-    // 计算垫资总额
+    // 计算消费总额
     var advanceTotal = 0;
     for (var i = 0; i < advanceRecords.length; i++) {
         advanceTotal += advanceRecords[i].amount;
@@ -435,9 +435,9 @@ async function handleSubmitToTable() {
         '上班时间': elements.startTime,
         '下班时间': elements.endTime,
         '备注': elements.notes || '',
-        '垫资记录': getAdvanceSummaryForTable(),
-        '垫资总额': advanceTotal > 0 ? advanceTotal.toFixed(2) : '',
-        '垫资次数': advanceRecords.length
+        '消费记录': getAdvanceSummaryForTable(),
+        '消费总额': advanceTotal > 0 ? advanceTotal.toFixed(2) : '',
+        '消费次数': advanceRecords.length
     };
 
     var apiUrl = '';
@@ -518,7 +518,7 @@ function loadFromLocalStorage() {
             if (notesTextarea && parsed.notes) {
                 notesTextarea.value = parsed.notes;
             }
-            // 恢复垫资记录
+            // 恢复消费记录
             if (parsed.advanceRecords && Array.isArray(parsed.advanceRecords)) {
                 advanceRecords = parsed.advanceRecords;
             }
@@ -580,7 +580,7 @@ function resetUI() {
     startDateTime = null;
     endDateTime = null;
     if (notesTextarea) notesTextarea.value = '';
-    // 清空垫资记录
+    // 清空消费记录
     advanceRecords = [];
     renderAdvanceList();
     saveToLocalStorage();
