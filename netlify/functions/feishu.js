@@ -1,4 +1,5 @@
-const fetch = require('node-fetch');
+// 飞书群消息 API (Netlify Functions)
+// 使用 Node.js 18+ 原生 fetch，无需 node-fetch
 
 // 从环境变量获取飞书应用凭证
 const APP_ID = process.env.FEISHU_APP_ID;
@@ -150,16 +151,16 @@ exports.handler = async function(event, context) {
                 message += '备注：' + (formattedData['备注'] || formattedData.notes) + '\n';
             }
 
-            // 追加垫资信息
+            // 追加消费信息
             if (formattedData.advanceRecords && formattedData.advanceRecords.length > 0) {
                 var total = 0;
-                message += '\n垫资记录：\n';
+                message += '\n💰消费：\n';
                 for (var i = 0; i < formattedData.advanceRecords.length; i++) {
                     var r = formattedData.advanceRecords[i];
                     total += r.amount;
                     message += '  ' + (i + 1) + '. ¥' + r.amount.toFixed(2) + ' - ' + r.purpose + ' (' + r.time + ')\n';
                 }
-                message += '  垫资合计: ¥' + total.toFixed(2);
+                message += '  消费合计: ¥' + total.toFixed(2);
             }
         }
 
