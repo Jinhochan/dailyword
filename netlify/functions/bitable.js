@@ -206,14 +206,14 @@ exports.handler = async function(event, context) {
             "备注": formattedData['备注'] || formattedData.notes || ''
         };
 
-        // 消费字段 - 写入多维表格（列名已改为「消费X」）
+        // 消费字段 - 写入多维表格（列名是「垫资X」，前端UI显示「💰消费」）
         const consumeRecord = formattedData['消费记录'] || '';
         const consumeTotal = formattedData['消费总额'] || '';
         const consumeCount = formattedData['消费次数'] || 0;
 
-        if (consumeRecord) fields['消费记录'] = consumeRecord;
-        if (consumeTotal) fields['消费总额'] = consumeTotal;
-        if (consumeCount > 0) fields['消费次数'] = consumeCount;
+        if (consumeRecord) fields['垫资记录'] = consumeRecord;
+        if (consumeTotal) fields['垫资总额'] = consumeTotal;
+        if (consumeCount > 0) fields['垫资次数'] = consumeCount;
 
         // 确保数据类型正确
         for (const [key, value] of Object.entries(fields)) {
@@ -259,7 +259,7 @@ exports.handler = async function(event, context) {
                     console.log('消费字段不存在，重试（仅核心字段）...');
                     const coreFields = {};
                     for (const [key, value] of Object.entries(fields)) {
-                        if (!['消费记录', '消费总额', '消费次数'].includes(key)) {
+                        if (!['垫资记录', '垫资总额', '垫资次数'].includes(key)) {
                             coreFields[key] = value;
                         }
                     }
