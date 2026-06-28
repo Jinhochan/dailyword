@@ -206,14 +206,15 @@ exports.handler = async function(event, context) {
             "备注": formattedData['备注'] || formattedData.notes || ''
         };
 
-        // 消费字段：只有存在数据时才加入
+        // 消费字段（前端UI显示「💰消费」，后端写入表格时用实际列名）
+        // ⚠️ 如果表格列名已改为「消费X」，请将下面3个 key 改为对应名称
         const consumeRecord = formattedData['消费记录'] || '';
         const consumeTotal = formattedData['消费总额'] || '';
         const consumeCount = formattedData['消费次数'] || 0;
 
-        if (consumeRecord) fields['消费记录'] = consumeRecord;
-        if (consumeTotal) fields['消费总额'] = consumeTotal;
-        if (consumeCount > 0) fields['消费次数'] = consumeCount;
+        if (consumeRecord) fields['垫资记录'] = consumeRecord;
+        if (consumeTotal) fields['垫资总额'] = consumeTotal;
+        if (consumeCount > 0) fields['垫资次数'] = consumeCount;
 
         // 确保数据类型正确
         for (const [key, value] of Object.entries(fields)) {
