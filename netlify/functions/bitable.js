@@ -1,5 +1,6 @@
 // 飞书多维表格 API (Netlify Functions)
-// 使用 Node.js 18+ 原生 fetch，无需 node-fetch
+// v3 - 使用 Node.js 18+ 原生 fetch，无需 node-fetch
+// 已移除「日期」字段要求，只使用 上班日期/下班日期
 
 // 从环境变量获取飞书应用凭证
 const APP_ID = process.env.FEISHU_APP_ID;
@@ -188,7 +189,7 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify({
                     success: false,
                     error: 'Missing required field',
-                    details: { code: 11012, msg: '缺少必要的日期字段' }
+                    details: { code: 11012, msg: '[v3]缺少必要的上班日期字段' }
                 })
             };
         }
