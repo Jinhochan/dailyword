@@ -207,13 +207,14 @@ exports.handler = async function(event, context) {
         };
 
         // 消费字段 - 写入多维表格（列名是「垫资X」，前端UI显示「💰消费」）
+        // ⚠️ 垫资总额必须是数字类型，飞书数字字段不接受格式化字符串
         const consumeRecord = formattedData['消费记录'] || '';
-        const consumeTotal = formattedData['消费总额'] || '';
-        const consumeCount = formattedData['消费次数'] || 0;
+        const consumeTotalRaw = formattedData['消费总额'];
+        const consumeCountRaw = formattedData['消费次数'] || 0;
 
         if (consumeRecord) fields['垫资记录'] = consumeRecord;
-        if (consumeTotal) fields['垫资总额'] = consumeTotal;
-        if (consumeCount > 0) fields['垫资次数'] = consumeCount;
+        if (consumeTotalRaw !== '' && consumeTotalRaw != null) fields['垫资总额'] = Number(consumeTotalRaw) || 0;
+        if (consumeCountRaw > 0) fields['垫资次数'] = parseInt(consumeCountRaw, 10) || 0;
 
         // 确保数据类型正确
         for (const [key, value] of Object.entries(fields)) {
