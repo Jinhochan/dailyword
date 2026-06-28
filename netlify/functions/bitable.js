@@ -1,4 +1,5 @@
-const fetch = require('node-fetch');
+// 飞书多维表格 API (Netlify Functions)
+// 使用 Node.js 18+ 原生 fetch，无需 node-fetch
 
 // 从环境变量获取飞书应用凭证
 const APP_ID = process.env.FEISHU_APP_ID;
@@ -25,19 +26,6 @@ const BITABLE_ERROR_CODES = {
     13006: '权限不足',
     13007: '记录数超出限制',
     13008: '字段值不合法'
-};
-
-// 字段映射配置 - 解决FieldNameNotFound问题
-const FIELD_MAPPINGS = {
-    "日期": "上班日期",
-    "上班日期": "上班日期",
-    "下班日期": "下班日期",
-    "上班时间": "上班时间",
-    "下班时间": "下班时间",
-    "备注": "备注",
-    "垫资记录": "垫资记录",
-    "垫资总额": "垫资总额",
-    "垫资次数": "垫资次数"
 };
 
 // 获取飞书访问令牌
@@ -83,32 +71,19 @@ async function createBitableRecord(accessToken, fields) {
     console.log('请求多维表格URL:', url);
     console.log('当前APP_TOKEN:', APP_TOKEN);
     console.log('当前TABLE_ID:', TABLE_ID);
-    console.log('请求体字段详细信息(转换前):', {
-        字段名称: Object.keys(fields),
-        字段值: fields,
-        字段数量: Object.keys(fields).length
-    });
 
-    // 使用字段映射转换字段名
-    const mappedFields = {};
+    // 过滤掉空值的消费字段（如果用户还没在多维表格加列则不提交这些字段）
+    const submitFields = {};
     for (const [key, value] of Object.entries(fields)) {
-        const mappedKey = FIELD_MAPPINGS[key] || key;
-        mappedFields[mappedKey] = value;
+        if (value === '' || value === null || value === undefined || value === 0) continue;
+        // 消费相关字段：只在有数据时才提交
+        if ((key === '消费记录' || key === '消费总额' || key === '消费次数') && !value && value !== 0) continue;
+        submitFields[key] = value;
     }
 
-    // 添加必填的'人员'字段默认值
-    if (!mappedFields['人员']) {
-        mappedFields['人员'] = '打卡用户';
-    }
+    console.log('最终提交字段:', JSON.stringify(submitFields, null, 2));
 
-    console.log('请求体字段详细信息(转换后):', {
-        字段名称: Object.keys(mappedFields),
-        字段值: mappedFields,
-        字段数量: Object.keys(mappedFields).length
-    });
-
-    const requestBody = { fields: mappedFields };
-    console.log('发送的完整请求体:', JSON.stringify(requestBody, null, 2));
+    const requestBody = { fields: submitFields };
 
     const response = await fetch(url, {
         method: 'POST',
@@ -140,7 +115,6 @@ async function createBitableRecord(accessToken, fields) {
             code: result.code,
             message: result.msg,
             requestBody: requestBody,
-            accessTokenUsed: accessToken ? '已提供' : '未提供',
             timestamp: new Date().toISOString()
         });
         throw new Error(errorMsg);
@@ -219,18 +193,24 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // 构建标准字段格式 - 包含垫资字段
+        // 构建标准字段格式 - 包含消费字段
         const fields = {
             "日期": formattedData['日期'] || formattedData.startDate,
             "上班日期": formattedData['上班日期'] || formattedData['日期'] || formattedData.startDate,
             "下班日期": formattedData['下班日期'] || formattedData['日期'] || formattedData.endDate,
             "上班时间": formattedData['上班时间'] || formattedData.startTime,
             "下班时间": formattedData['下班时间'] || formattedData.endTime,
-            "备注": formattedData['备注'] || formattedData.notes || '',
-            "垫资记录": formattedData['垫资记录'] || '',
-            "垫资总额": formattedData['垫资总额'] || '',
-            "垫资次数": formattedData['垫资次数'] || 0
+            "备注": formattedData['备注'] || formattedData.notes || ''
         };
+
+        // 消费字段：只有存在数据时才加入
+        const consumeRecord = formattedData['消费记录'] || '';
+        const consumeTotal = formattedData['消费总额'] || '';
+        const consumeCount = formattedData['消费次数'] || 0;
+
+        if (consumeRecord) fields['消费记录'] = consumeRecord;
+        if (consumeTotal) fields['消费总额'] = consumeTotal;
+        if (consumeCount > 0) fields['消费次数'] = consumeCount;
 
         // 确保数据类型正确
         for (const [key, value] of Object.entries(fields)) {
@@ -258,11 +238,6 @@ exports.handler = async function(event, context) {
                     fields[field] = String(fields[field]);
                 }
             }
-        }
-
-        // 确保垫资次数为数字
-        if (fields['垫资次数']) {
-            fields['垫资次数'] = parseInt(fields['垫资次数']) || 0;
         }
 
         console.log('最终提交字段:', JSON.stringify(fields, null, 2));
