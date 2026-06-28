@@ -235,7 +235,7 @@ body {
     background: #0066d6;
 }
 
-/* ============ 垫资记录区域 ============ */
+/* ============ 消费记录区域 ============ */
 
 .advance-section {
     background: var(--card);
@@ -339,7 +339,7 @@ body {
     transform: scale(0.92);
 }
 
-/* 垫资列表 */
+/* 消费列表 */
 .advance-list {
     display: flex;
     flex-direction: column;
