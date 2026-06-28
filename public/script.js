@@ -113,7 +113,7 @@ function handleAddAdvance() {
     var amountStr = advanceAmountInput.value.trim();
     var purpose = advancePurposeInput.value.trim();
 
-    if (!amountStr || parseFloat(amountStr) <= 0) {
+    if (!amountStr || parseFloat(amountStr) === 0 || isNaN(parseFloat(amountStr))) {
         showToast('请输入有效金额', 'error');
         advanceAmountInput.focus();
         return;
