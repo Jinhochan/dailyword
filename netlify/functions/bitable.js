@@ -250,7 +250,27 @@ exports.handler = async function(event, context) {
             const accessToken = await getAccessToken();
             console.log('成功获取访问令牌，开始创建多维表格记录...');
 
-            const result = await createBitableRecord(accessToken, fields);
+            let result;
+            try {
+                // 第一次尝试：包含所有字段（含消费/垫资）
+                result = await createBitableRecord(accessToken, fields);
+            } catch (firstError) {
+                // 如果是字段不存在的错误，去掉消费相关字段后重试
+                if (firstError.message.includes('FieldNameNotFound') || firstError.message.includes('字段不存在')) {
+                    console.log('消费字段不存在，重试（仅核心字段）...');
+                    const coreFields = {};
+                    for (const [key, value] of Object.entries(fields)) {
+                        if (!['垫资记录', '垫资总额', '垫资次数', '消费记录', '消费总额', '消费次数'].includes(key)) {
+                            coreFields[key] = value;
+                        }
+                    }
+                    result = await createBitableRecord(accessToken, coreFields);
+                    // 标记消费数据未写入
+                    result._consumeSkipped = true;
+                } else {
+                    throw firstError; // 其他错误继续抛出
+                }
+            }
 
             return {
                 statusCode: 200,
@@ -260,7 +280,7 @@ exports.handler = async function(event, context) {
                     result,
                     details: {
                         code: 0,
-                        msg: '记录创建成功',
+                        msg: result._consumeSkipped ? '记录创建成功（消费数据未写入，请先在表格中添加消费列）' : '记录创建成功',
                         recordId: result.data?.record?.record_id || '未知'
                     }
                 })
