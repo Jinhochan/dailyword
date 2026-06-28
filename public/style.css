@@ -8,6 +8,7 @@
     --green: #30d158;
     --red: #ff453a;
     --gray: #8e8e93;
+    --orange: #ff9500;
     --border: rgba(0,0,0,0.06);
     --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
     --radius: 16px;
@@ -234,6 +235,188 @@ body {
     background: #0066d6;
 }
 
+/* ============ 垫资记录区域 ============ */
+
+.advance-section {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.advance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.advance-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.advance-total {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+}
+
+.advance-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.advance-amount {
+    width: 90px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s ease;
+}
+
+.advance-amount:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.12);
+}
+
+.advance-purpose {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.advance-purpose:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.12);
+}
+
+.advance-purpose::placeholder,
+.advance-amount::placeholder {
+    color: var(--text-secondary);
+}
+
+.btn-add-advance {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    flex: none;
+    background: var(--orange);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(255, 149, 0, 0.3);
+}
+
+.btn-add-advance:active {
+    transform: scale(0.92);
+}
+
+/* 垫资列表 */
+.advance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.advance-empty {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 12px 0;
+}
+
+.advance-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 10px;
+    border-left: 3px solid var(--orange);
+}
+
+.advance-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.advance-item-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+}
+
+.advance-item-purpose {
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.advance-item-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.advance-item-delete {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    background: rgba(255, 69, 58, 0.1);
+    color: var(--red);
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+    margin-left: 8px;
+}
+
+.advance-item-delete:active {
+    transform: scale(0.9);
+    background: rgba(255, 69, 58, 0.2);
+}
+
 /* Tools Section */
 .tools-section {
     margin-top: auto;
@@ -354,6 +537,15 @@ body {
         --border: rgba(255,255,255,0.08);
         --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
     }
+
+    .advance-amount,
+    .advance-purpose {
+        background: #2c2c2e;
+    }
+
+    .advance-item {
+        background: #2c2c2e;
+    }
 }
 
 /* Small phones */
@@ -361,4 +553,5 @@ body {
     .app { padding: 0 16px; }
     .time-value { font-size: 28px; }
     .btn { padding: 14px 16px; font-size: 14px; }
+    .advance-amount { width: 72px; }
 }

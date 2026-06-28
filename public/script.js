@@ -2,6 +2,9 @@
 let startDateTime = null;
 let endDateTime = null;
 
+// 垫资记录数组
+let advanceRecords = [];
+
 // 全局DOM元素引用
 let startBtn = null;
 let endBtn = null;
@@ -10,6 +13,11 @@ let submitToTableBtn = null;
 let clearDataBtn = null;
 let viewDataBtn = null;
 let notesTextarea = null;
+let addAdvanceBtn = null;
+let advanceAmountInput = null;
+let advancePurposeInput = null;
+let advanceListEl = null;
+let advanceTotalEl = null;
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
@@ -21,13 +29,18 @@ document.addEventListener('DOMContentLoaded', function() {
     clearDataBtn = document.getElementById('clearDataBtn');
     viewDataBtn = document.getElementById('viewDataBtn');
     notesTextarea = document.getElementById('notes');
+    addAdvanceBtn = document.getElementById('addAdvanceBtn');
+    advanceAmountInput = document.getElementById('advanceAmount');
+    advancePurposeInput = document.getElementById('advancePurpose');
+    advanceListEl = document.getElementById('advanceList');
+    advanceTotalEl = document.getElementById('advanceTotal');
 
     // 显示今天的日期
     const todayEl = document.getElementById('todayDate');
     if (todayEl) {
         const now = new Date();
         const days = ['日', '一', '二', '三', '四', '五', '六'];
-        todayEl.textContent = `${now.getMonth() + 1}月${now.getDate()}日 周${days[now.getDay()]}`;
+        todayEl.textContent = now.getMonth() + 1 + '月' + now.getDate() + '日 周' + days[now.getDay()];
     }
 
     // 从本地存储加载数据
@@ -38,7 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (startDateTime) {
             startBtn.disabled = true;
             endBtn.disabled = false;
-            document.getElementById('startCard')?.classList.add('active');
+            var startCard = document.getElementById('startCard');
+            if (startCard) startCard.classList.add('active');
         } else {
             startBtn.disabled = false;
             endBtn.disabled = true;
@@ -53,20 +67,36 @@ document.addEventListener('DOMContentLoaded', function() {
     if (clearDataBtn) clearDataBtn.addEventListener('click', handleClearData);
     if (viewDataBtn) viewDataBtn.addEventListener('click', handleViewData);
 
+    // 垫资按钮事件
+    if (addAdvanceBtn) addAdvanceBtn.addEventListener('click', handleAddAdvance);
+    if (advanceAmountInput) {
+        advanceAmountInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); advancePurposeInput.focus(); }
+        });
+    }
+    if (advancePurposeInput) {
+        advancePurposeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); handleAddAdvance(); }
+        });
+    }
+
     // 备注自动保存
     if (notesTextarea) {
         notesTextarea.addEventListener('blur', saveToLocalStorage);
     }
 
     // 工具面板折叠
-    const toolsToggle = document.getElementById('toolsToggle');
-    const toolsContent = document.getElementById('toolsContent');
+    var toolsToggle = document.getElementById('toolsToggle');
+    var toolsContent = document.getElementById('toolsContent');
     if (toolsToggle && toolsContent) {
         toolsToggle.addEventListener('click', function() {
             this.classList.toggle('open');
             toolsContent.classList.toggle('show');
         });
     }
+
+    // 渲染垫资列表
+    renderAdvanceList();
 
     // 防止双击缩放
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
@@ -77,15 +107,115 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Toast通知
-function showToast(message, type = 'info') {
-    let container = document.querySelector('.toast-container');
+// ============ 垫资管理 ============
+
+function handleAddAdvance() {
+    var amountStr = advanceAmountInput.value.trim();
+    var purpose = advancePurposeInput.value.trim();
+
+    if (!amountStr || parseFloat(amountStr) <= 0) {
+        showToast('请输入有效金额', 'error');
+        advanceAmountInput.focus();
+        return;
+    }
+
+    var amount = parseFloat(amountStr);
+    advanceRecords.push({
+        amount: amount,
+        purpose: purpose || '未填写',
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    });
+
+    advanceAmountInput.value = '';
+    advancePurposeInput.value = '';
+    advanceAmountInput.focus();
+
+    renderAdvanceList();
+    saveToLocalStorage();
+    showToast('垫资已添加: ¥' + amount.toFixed(2), 'success');
+}
+
+function handleDeleteAdvance(index) {
+    advanceRecords.splice(index, 1);
+    renderAdvanceList();
+    saveToLocalStorage();
+    showToast('已删除', 'info');
+}
+
+function renderAdvanceList() {
+    if (!advanceListEl) return;
+
+    if (advanceRecords.length === 0) {
+        advanceListEl.innerHTML = '<div class="advance-empty">暂无垫资记录</div>';
+    } else {
+        var html = '';
+        for (var i = 0; i < advanceRecords.length; i++) {
+            var r = advanceRecords[i];
+            html += '<div class="advance-item">'
+                + '<div class="advance-item-info">'
+                + '<span class="advance-item-amount">¥' + r.amount.toFixed(2) + '</span>'
+                + '<span class="advance-item-purpose">' + escapeHtml(r.purpose) + '</span>'
+                + '<span class="advance-item-time">' + r.time + '</span>'
+                + '</div>'
+                + '<button class="advance-item-delete" onclick="handleDeleteAdvance(' + i + ')">×</button>'
+                + '</div>';
+        }
+        advanceListEl.innerHTML = html;
+    }
+
+    // 更新总额
+    var total = 0;
+    for (var j = 0; j < advanceRecords.length; j++) {
+        total += advanceRecords[j].amount;
+    }
+    if (advanceTotalEl) {
+        advanceTotalEl.textContent = '¥' + total.toFixed(2);
+    }
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getAdvanceSummaryText() {
+    if (advanceRecords.length === 0) return '';
+    var total = 0;
+    var lines = '';
+    for (var i = 0; i < advanceRecords.length; i++) {
+        var r = advanceRecords[i];
+        total += r.amount;
+        lines += '  ' + (i + 1) + '. ¥' + r.amount.toFixed(2) + ' - ' + r.purpose + ' (' + r.time + ')\n';
+    }
+    lines += '  垫资合计: ¥' + total.toFixed(2);
+    return lines;
+}
+
+function getAdvanceSummaryForTable() {
+    if (advanceRecords.length === 0) return '';
+    var total = 0;
+    var lines = '';
+    for (var i = 0; i < advanceRecords.length; i++) {
+        var r = advanceRecords[i];
+        total += r.amount;
+        lines += (i + 1) + '. ¥' + r.amount.toFixed(2) + ' - ' + r.purpose + ' (' + r.time + ')\n';
+    }
+    lines += '合计: ¥' + total.toFixed(2);
+    return lines;
+}
+
+// ============ Toast 通知 ============
+
+function showToast(message, type) {
+    type = type || 'info';
+    var container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
         container.className = 'toast-container';
         document.body.appendChild(container);
     }
-    const toast = document.createElement('div');
+    var toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
     container.appendChild(toast);
@@ -96,11 +226,12 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// 验证并获取必要元素
+// ============ 验证 ============
+
 function validateAndGetElements() {
-    const startTime = document.getElementById('startTime').textContent;
-    const endTime = document.getElementById('endTime').textContent;
-    const notes = document.getElementById('notes').value;
+    var startTime = document.getElementById('startTime').textContent;
+    var endTime = document.getElementById('endTime').textContent;
+    var notes = document.getElementById('notes').value;
     if (startTime === '--:--' || endTime === '--:--') {
         showToast('请先完成打卡！', 'error');
         return null;
@@ -108,7 +239,8 @@ function validateAndGetElements() {
     return { startTime: startTime, endTime: endTime, notes: notes };
 }
 
-// 发送API请求
+// ============ API 请求 ============
+
 async function sendApiRequest(url, data, button) {
     var originalText = button.textContent;
     button.classList.add('loading');
@@ -163,7 +295,8 @@ async function sendApiRequest(url, data, button) {
     }
 }
 
-// 上班打卡
+// ============ 打卡 ============
+
 function handleStartClick() {
     if (startDateTime !== null) {
         showToast('您已经打卡上班了！', 'info');
@@ -178,7 +311,8 @@ function handleStartClick() {
         startTimeEl.textContent = formatTime(startDateTime);
         startBtn.disabled = true;
         endBtn.disabled = false;
-        document.getElementById('startCard')?.classList.add('active');
+        var startCard = document.getElementById('startCard');
+        if (startCard) startCard.classList.add('active');
         saveToLocalStorage();
         showToast('上班打卡成功！', 'success');
     } else {
@@ -187,7 +321,6 @@ function handleStartClick() {
     }
 }
 
-// 下班打卡
 function handleEndClick() {
     endDateTime = new Date();
     var endDateEl = document.getElementById('endDate');
@@ -195,7 +328,7 @@ function handleEndClick() {
     if (startDateEl && endDateEl) {
         var startDateText = startDateEl.textContent;
         if (startDateText !== '\u00a0' && startDateText !== '----' && endDateTime.getHours() >= 0 && endDateTime.getHours() < 8) {
-            var parts = startDateText.includes('/') ? startDateText.split('/') : startDateText.split('-');
+            var parts = startDateText.indexOf('/') > -1 ? startDateText.split('/') : startDateText.split('-');
             if (parts.length === 3) {
                 var nextDay = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 nextDay.setDate(nextDay.getDate() + 1);
@@ -206,7 +339,8 @@ function handleEndClick() {
         }
     }
     document.getElementById('endTime').textContent = formatTime(endDateTime);
-    document.getElementById('endCard')?.classList.add('active');
+    var endCard = document.getElementById('endCard');
+    if (endCard) endCard.classList.add('active');
 
     if (startBtn) startBtn.disabled = true;
     if (endBtn) endBtn.disabled = true;
@@ -230,21 +364,42 @@ function handleEndClick() {
     showToast('下班打卡成功！', 'success');
 }
 
-// 处理飞书群提交
+// ============ 飞书群提交 ============
+
 async function handleSubmitToGroup() {
     var elements = validateAndGetElements();
     if (!elements) return;
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
+
+    // 构建消息内容
+    var message = '打卡信息：\n';
+    message += '上班日期：' + startDateText + '\n';
+    message += '上班时间：' + elements.startTime + '\n';
+    message += '下班时间：' + elements.endTime + '\n';
+    if (elements.notes) {
+        message += '备注：' + elements.notes + '\n';
+    }
+
+    // 追加垫资信息
+    var advanceText = getAdvanceSummaryText();
+    if (advanceText) {
+        message += '\n垫资记录：\n' + advanceText;
+    }
+
     var data = {
         startDate: startDateText,
         endDate: endDateText,
         startTime: elements.startTime,
         endTime: elements.endTime,
-        notes: elements.notes
+        notes: elements.notes,
+        message: message,
+        advanceRecords: advanceRecords,
+        advanceTotal: advanceRecords.reduce(function(sum, r) { return sum + r.amount; }, 0)
     };
+
     var apiUrl = '';
-    if (window.location.hostname.includes('.netlify.app')) {
+    if (window.location.hostname.indexOf('.netlify.app') > -1) {
         apiUrl = '/.netlify/functions/feishu';
     } else if (window.location.hostname === 'localhost') {
         apiUrl = window.location.protocol + '//' + window.location.hostname + ':' + (window.location.port || 3000) + '/.netlify/functions/feishu';
@@ -259,22 +414,34 @@ async function handleSubmitToGroup() {
     }
 }
 
-// 处理多维表格提交
+// ============ 多维表格提交 ============
+
 async function handleSubmitToTable() {
     var elements = validateAndGetElements();
     if (!elements) return;
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
+
+    // 计算垫资总额
+    var advanceTotal = 0;
+    for (var i = 0; i < advanceRecords.length; i++) {
+        advanceTotal += advanceRecords[i].amount;
+    }
+
     var data = {
         '日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '上班日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '下班日期': { type: 'date', value: convertToBitableDate(endDateText) },
         '上班时间': elements.startTime,
         '下班时间': elements.endTime,
-        '备注': elements.notes
+        '备注': elements.notes || '',
+        '垫资记录': getAdvanceSummaryForTable(),
+        '垫资总额': advanceTotal > 0 ? advanceTotal.toFixed(2) : '',
+        '垫资次数': advanceRecords.length
     };
+
     var apiUrl = '';
-    if (window.location.hostname.includes('.netlify.app')) {
+    if (window.location.hostname.indexOf('.netlify.app') > -1) {
         apiUrl = '/.netlify/functions/bitable';
     } else if (window.location.hostname === 'localhost') {
         apiUrl = window.location.protocol + '//' + window.location.hostname + ':' + (window.location.port || 3000) + '/.netlify/functions/bitable';
@@ -290,19 +457,19 @@ async function handleSubmitToTable() {
 }
 
 function convertToBitableDate(dateText) {
-    var parts = dateText.includes('/') ? dateText.split('/') : dateText.split('-');
+    var parts = dateText.indexOf('/') > -1 ? dateText.split('/') : dateText.split('-');
     if (parts.length !== 3) return dateText;
     return { year: parseInt(parts[0]), month: parseInt(parts[1]), day: parseInt(parts[2]) };
 }
 
-// 清除数据
+// ============ 工具 ============
+
 function handleClearData() {
     localStorage.removeItem('dailyWordData');
     resetUI();
     showToast('数据已清除', 'info');
 }
 
-// 查看数据
 function handleViewData() {
     try {
         var data = localStorage.getItem('dailyWordData');
@@ -317,13 +484,15 @@ function handleViewData() {
     }
 }
 
-// 保存到本地存储
+// ============ 本地存储 ============
+
 function saveToLocalStorage() {
     try {
         var data = {
             startDateTime: startDateTime ? startDateTime.toISOString() : null,
             endDateTime: endDateTime ? endDateTime.toISOString() : null,
-            notes: notesTextarea ? notesTextarea.value : ''
+            notes: notesTextarea ? notesTextarea.value : '',
+            advanceRecords: advanceRecords
         };
         localStorage.setItem('dailyWordData', JSON.stringify(data));
     } catch (e) {
@@ -331,7 +500,6 @@ function saveToLocalStorage() {
     }
 }
 
-// 从本地存储加载
 function loadFromLocalStorage() {
     try {
         var data = localStorage.getItem('dailyWordData');
@@ -350,14 +518,20 @@ function loadFromLocalStorage() {
             if (notesTextarea && parsed.notes) {
                 notesTextarea.value = parsed.notes;
             }
+            // 恢复垫资记录
+            if (parsed.advanceRecords && Array.isArray(parsed.advanceRecords)) {
+                advanceRecords = parsed.advanceRecords;
+            }
             if (startBtn && endBtn) {
                 if (startDateTime && endDateTime) {
                     startBtn.disabled = true;
                     endBtn.disabled = true;
                     submitToGroupBtn.disabled = false;
                     submitToTableBtn.disabled = false;
-                    document.getElementById('startCard')?.classList.add('active');
-                    document.getElementById('endCard')?.classList.add('active');
+                    var startCard = document.getElementById('startCard');
+                    var endCard = document.getElementById('endCard');
+                    if (startCard) startCard.classList.add('active');
+                    if (endCard) endCard.classList.add('active');
                     // 计算时长
                     var diff = endDateTime - startDateTime;
                     var hours = Math.floor(diff / 3600000);
@@ -371,7 +545,8 @@ function loadFromLocalStorage() {
                 } else if (startDateTime) {
                     startBtn.disabled = true;
                     endBtn.disabled = false;
-                    document.getElementById('startCard')?.classList.add('active');
+                    var sc = document.getElementById('startCard');
+                    if (sc) sc.classList.add('active');
                 } else {
                     startBtn.disabled = false;
                     endBtn.disabled = true;
@@ -385,7 +560,8 @@ function loadFromLocalStorage() {
     }
 }
 
-// 重置UI
+// ============ 重置UI ============
+
 function resetUI() {
     if (startBtn) startBtn.disabled = false;
     if (endBtn) endBtn.disabled = true;
@@ -395,17 +571,23 @@ function resetUI() {
     document.getElementById('startTime').textContent = '--:--';
     document.getElementById('endDate').textContent = '\u00a0';
     document.getElementById('endTime').textContent = '--:--';
-    document.getElementById('startCard')?.classList.remove('active');
-    document.getElementById('endCard')?.classList.remove('active');
+    var startCard = document.getElementById('startCard');
+    var endCard = document.getElementById('endCard');
+    if (startCard) startCard.classList.remove('active');
+    if (endCard) endCard.classList.remove('active');
     var durationBar = document.getElementById('durationBar');
     if (durationBar) durationBar.style.display = 'none';
     startDateTime = null;
     endDateTime = null;
     if (notesTextarea) notesTextarea.value = '';
+    // 清空垫资记录
+    advanceRecords = [];
+    renderAdvanceList();
     saveToLocalStorage();
 }
 
-// 格式化日期 YYYY/MM/DD
+// ============ 格式化 ============
+
 function formatDate(date) {
     if (!(date instanceof Date)) return '----';
     var y = date.getFullYear();
@@ -414,7 +596,6 @@ function formatDate(date) {
     return y + '/' + m + '/' + d;
 }
 
-// 格式化时间 HH:MM
 function formatTime(date) {
     if (!(date instanceof Date)) return '--:--';
     var h = date.getHours().toString().padStart(2, '0');

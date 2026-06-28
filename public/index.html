@@ -49,6 +49,20 @@
             </button>
         </section>
 
+        <!-- 垫资记录区域 -->
+        <section class="advance-section">
+            <div class="advance-header">
+                <span class="advance-title">垫资记录</span>
+                <span class="advance-total" id="advanceTotal">¥0.00</span>
+            </div>
+            <div class="advance-input-row">
+                <input type="number" class="advance-amount" id="advanceAmount" placeholder="金额" step="0.01" min="0">
+                <input type="text" class="advance-purpose" id="advancePurpose" placeholder="用途">
+                <button class="btn btn-add-advance" id="addAdvanceBtn">+</button>
+            </div>
+            <div class="advance-list" id="advanceList"></div>
+        </section>
+
         <section class="notes">
             <textarea id="notes" placeholder="备注（可选）" rows="2"></textarea>
         </section>

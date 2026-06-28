@@ -19,7 +19,7 @@ async function getAccessToken() {
                 "app_secret": APP_SECRET
             })
         });
-        
+
         const text = await response.text();
         let data;
         try {
@@ -48,14 +48,13 @@ async function sendMessage(message) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "msg_type": "text",  // 必须指定消息类型
+                "msg_type": "text",
                 "content": {
                     "text": message
                 }
             })
         });
-        
-        // 检查响应是否为空或无效
+
         const text = await response.text();
         let result;
         try {
@@ -65,7 +64,7 @@ async function sendMessage(message) {
             throw new Error('无效的API响应格式');
         }
         console.log('发送消息响应:', result);
-        
+
         if (result.code !== 0) {
             throw new Error(result.msg || '发送消息失败');
         }
@@ -77,23 +76,20 @@ async function sendMessage(message) {
 }
 
 exports.handler = async function(event, context) {
-    // 设置统一的CORS头信息
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
     };
-    
-    // 添加 OPTIONS 请求处理
+
     if (event.httpMethod === 'OPTIONS') {
         return {
-            statusCode: 204,  // 使用204状态码更适合预检请求
+            statusCode: 204,
             headers,
             body: ''
         };
     }
-    
-    // 只允许 POST 请求
+
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -104,7 +100,7 @@ exports.handler = async function(event, context) {
 
     try {
         console.log('开始处理请求...');
-        // 安全解析请求体
+
         let data;
         try {
             data = JSON.parse(event.body || '{}');
@@ -113,45 +109,63 @@ exports.handler = async function(event, context) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ 
-                    success: false, 
+                body: JSON.stringify({
+                    success: false,
                     error: 'Invalid JSON in request body',
-                    details: { code: 400, msg: '请求体JSON格式无效' } 
+                    details: { code: 400, msg: '请求体JSON格式无效' }
                 })
             };
         }
-        
+
         // 兼容前端可能发送的不同数据格式
         let formattedData = data;
         if (data.fields) {
             formattedData = data.fields;
         }
-        
+
         // 检查必要字段
-        if (!formattedData.startDate && !formattedData.日期) {
+        if (!formattedData.startDate && !formattedData['日期']) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ 
-                    success: false, 
-                    error: 'text require', 
-                    details: { code: 400, msg: '缺少必要的打卡信息' } 
+                body: JSON.stringify({
+                    success: false,
+                    error: 'text require',
+                    details: { code: 400, msg: '缺少必要的打卡信息' }
                 })
             };
         }
-        
-        // 构建消息内容
-        const message = `
-打卡信息：
-上班日期：${formattedData.日期 || formattedData.startDate}
-上班时间：${formattedData.上班时间 || formattedData.startTime}
-下班时间：${formattedData.下班时间 || formattedData.endTime}
-${formattedData.备注 || formattedData.notes ? `备注：${formattedData.备注 || formattedData.notes}` : ''}
-        `.trim();
-        
+
+        // 如果前端已构建好消息内容，直接使用
+        let message = formattedData.message;
+
+        if (!message) {
+            // 后端构建消息内容
+            message = '打卡信息：\n';
+            message += '上班日期：' + (formattedData['日期'] || formattedData.startDate) + '\n';
+            message += '上班时间：' + (formattedData['上班时间'] || formattedData.startTime) + '\n';
+            message += '下班时间：' + (formattedData['下班时间'] || formattedData.endTime) + '\n';
+
+            if (formattedData['备注'] || formattedData.notes) {
+                message += '备注：' + (formattedData['备注'] || formattedData.notes) + '\n';
+            }
+
+            // 追加垫资信息
+            if (formattedData.advanceRecords && formattedData.advanceRecords.length > 0) {
+                var total = 0;
+                message += '\n垫资记录：\n';
+                for (var i = 0; i < formattedData.advanceRecords.length; i++) {
+                    var r = formattedData.advanceRecords[i];
+                    total += r.amount;
+                    message += '  ' + (i + 1) + '. ¥' + r.amount.toFixed(2) + ' - ' + r.purpose + ' (' + r.time + ')\n';
+                }
+                message += '  垫资合计: ¥' + total.toFixed(2);
+            }
+        }
+
         const result = await sendMessage(message);
         console.log('发送消息成功:', result);
-        
+
         return {
             statusCode: 200,
             headers,
@@ -162,8 +176,8 @@ ${formattedData.备注 || formattedData.notes ? `备注：${formattedData.备注
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ 
-                success: false, 
+            body: JSON.stringify({
+                success: false,
                 error: error.message,
                 details: { code: 500, msg: '服务器内部错误' }
             })
