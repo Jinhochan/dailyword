@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 渲染垫资列表
+    // 渲染消费列表
     renderAdvanceList();
 
     // 防止双击缩放
