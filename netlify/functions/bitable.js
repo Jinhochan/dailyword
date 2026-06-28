@@ -180,8 +180,8 @@ exports.handler = async function(event, context) {
             formattedData = data.fields;
         }
 
-        // 检查必要字段
-        if (!formattedData['日期'] && !formattedData.startDate) {
+        // 检查必要字段（兼容多种格式）
+        if (!formattedData['上班日期'] && !formattedData['日期'] && !formattedData.startDate) {
             return {
                 statusCode: 400,
                 headers,
@@ -193,11 +193,13 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // 构建标准字段格式 - 包含消费字段
+        // 构建标准字段格式 - 只包含多维表格实际存在的列名
+        const rawDate = formattedData['上班日期'] || formattedData['日期'] || formattedData.startDate;
+        const endDate = formattedData['下班日期'] || formattedData.endDate || rawDate;
+
         const fields = {
-            "日期": formattedData['日期'] || formattedData.startDate,
-            "上班日期": formattedData['上班日期'] || formattedData['日期'] || formattedData.startDate,
-            "下班日期": formattedData['下班日期'] || formattedData['日期'] || formattedData.endDate,
+            "上班日期": rawDate,
+            "下班日期": endDate,
             "上班时间": formattedData['上班时间'] || formattedData.startTime,
             "下班时间": formattedData['下班时间'] || formattedData.endTime,
             "备注": formattedData['备注'] || formattedData.notes || ''
@@ -222,7 +224,7 @@ exports.handler = async function(event, context) {
         }
 
         // 处理日期字段
-        const dateFields = ['日期', '上班日期', '下班日期'];
+        const dateFields = ['上班日期', '下班日期'];
         for (const field of dateFields) {
             if (fields[field] && typeof fields[field] === 'object' && fields[field].type === 'date' && fields[field].value) {
                 const v = fields[field].value;
