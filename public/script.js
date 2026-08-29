@@ -5,6 +5,15 @@ let endDateTime = null;
 // 消费记录数组
 let advanceRecords = [];
 
+// 提交锁 - 防止重复提交
+let isSubmitting = false;
+
+// 提交状态跟踪
+let submittedTargets = {
+    group: false,
+    table: false
+};
+
 // 全局DOM元素引用
 let startBtn = null;
 let endBtn = null;
@@ -18,6 +27,8 @@ let advanceAmountInput = null;
 let advancePurposeInput = null;
 let advanceListEl = null;
 let advanceTotalEl = null;
+let offlineQueueBtn = null;
+let offlineQueueCount = 0;
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
@@ -34,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     advancePurposeInput = document.getElementById('advancePurpose');
     advanceListEl = document.getElementById('advanceList');
     advanceTotalEl = document.getElementById('advanceTotal');
+    offlineQueueBtn = document.getElementById('offlineQueueBtn');
 
     // 显示今天的日期
     const todayEl = document.getElementById('todayDate');
@@ -66,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (submitToTableBtn) submitToTableBtn.addEventListener('click', handleSubmitToTable);
     if (clearDataBtn) clearDataBtn.addEventListener('click', handleClearData);
     if (viewDataBtn) viewDataBtn.addEventListener('click', handleViewData);
+    if (offlineQueueBtn) offlineQueueBtn.addEventListener('click', handleRetryOfflineQueue);
 
     // 消费按钮事件
     if (addAdvanceBtn) addAdvanceBtn.addEventListener('click', handleAddAdvance);
@@ -98,12 +111,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // 渲染消费列表
     renderAdvanceList();
 
+    // 检查离线队列
+    checkOfflineQueue();
+
     // 防止双击缩放
     document.addEventListener('dblclick', function(e) { e.preventDefault(); });
 
     // 旋转屏幕时保存数据
     window.addEventListener('orientationchange', function() {
         if (startDateTime || endDateTime) saveToLocalStorage();
+    });
+
+    // 页面可见性变化时检查离线队列
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            checkOfflineQueue();
+        }
     });
 });
 
@@ -239,18 +262,126 @@ function validateAndGetElements() {
     return { startTime: startTime, endTime: endTime, notes: notes };
 }
 
+// ============ 离线队列管理 ============
+
+function getOfflineQueue() {
+    var queue = [];
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf('api_backup_') === 0) {
+            keys.push(key);
+        }
+    }
+    keys.sort();
+    for (var j = 0; j < keys.length; j++) {
+        try {
+            var item = JSON.parse(localStorage.getItem(keys[j]));
+            if (item && item.status === 'pending') {
+                item._key = keys[j];
+                queue.push(item);
+            }
+        } catch (e) {
+            // 清除损坏的数据
+            localStorage.removeItem(keys[j]);
+        }
+    }
+    return queue;
+}
+
+function checkOfflineQueue() {
+    var queue = getOfflineQueue();
+    offlineQueueCount = queue.length;
+    updateOfflineQueueUI();
+}
+
+function updateOfflineQueueUI() {
+    var offlineSection = document.getElementById('offlineQueueSection');
+    if (!offlineQueueBtn) return;
+    if (offlineQueueCount > 0) {
+        offlineQueueBtn.style.display = '';
+        offlineQueueBtn.textContent = '待重试 (' + offlineQueueCount + ')';
+        if (offlineSection) offlineSection.style.display = '';
+    } else {
+        offlineQueueBtn.style.display = 'none';
+        if (offlineSection) offlineSection.style.display = 'none';
+    }
+}
+
+async function handleRetryOfflineQueue() {
+    var queue = getOfflineQueue();
+    if (queue.length === 0) {
+        showToast('没有待重试的数据', 'info');
+        return;
+    }
+
+    if (isSubmitting) {
+        showToast('正在处理中，请稍候', 'info');
+        return;
+    }
+
+    isSubmitting = true;
+    var successCount = 0;
+    var failCount = 0;
+
+    showToast('开始重试 ' + queue.length + ' 条待提交数据...', 'info');
+
+    for (var i = 0; i < queue.length; i++) {
+        var item = queue[i];
+        try {
+            var response = await fetch(item.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item.data)
+            });
+
+            if (response.ok) {
+                var result = await response.json();
+                if (result.success) {
+                    localStorage.removeItem(item._key);
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } else {
+                failCount++;
+            }
+        } catch (e) {
+            failCount++;
+        }
+    }
+
+    isSubmitting = false;
+    checkOfflineQueue();
+
+    if (successCount > 0 && failCount === 0) {
+        showToast('全部重试成功！共 ' + successCount + ' 条', 'success');
+    } else if (successCount > 0) {
+        showToast('部分成功：' + successCount + ' 成功，' + failCount + ' 失败', 'info');
+    } else {
+        showToast('重试失败，请检查网络后重试', 'error');
+    }
+}
+
 // ============ API 请求 ============
 
 async function sendApiRequest(url, data, button) {
+    if (isSubmitting) {
+        showToast('正在处理中，请稍候', 'info');
+        return null;
+    }
+
+    isSubmitting = true;
     var originalText = button.textContent;
     button.classList.add('loading');
     button.innerHTML = '<span class="spinner"></span>' + originalText;
     button.disabled = true;
+
     try {
         var response;
         try {
             var controller = new AbortController();
-            var timeoutId = setTimeout(function() { controller.abort(); }, 10000);
+            var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
             response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -260,14 +391,28 @@ async function sendApiRequest(url, data, button) {
             clearTimeout(timeoutId);
         } catch (networkError) {
             console.error('网络连接错误:', networkError);
+            // 保存到离线队列
             var backupKey = 'api_backup_' + Date.now();
-            localStorage.setItem(backupKey, JSON.stringify({ timestamp: new Date(), url: url, data: data, status: 'pending' }));
-            showToast('网络连接失败，数据已保存到本地', 'error');
+            localStorage.setItem(backupKey, JSON.stringify({
+                timestamp: new Date().toISOString(),
+                url: url,
+                data: data,
+                status: 'pending'
+            }));
+            checkOfflineQueue();
+            // 重置按钮状态
+            button.classList.remove('loading');
+            button.innerHTML = originalText;
+            button.disabled = false;
+            isSubmitting = false;
+            showToast('网络连接失败，数据已保存到待重试队列', 'error');
             return { success: false, offline: true, message: '网络连接失败' };
         }
+
         if (!response.ok) {
             throw new Error('服务器响应错误: ' + response.status + ' ' + response.statusText);
         }
+
         var responseText;
         var result;
         try {
@@ -277,18 +422,27 @@ async function sendApiRequest(url, data, button) {
             console.error('JSON解析错误:', parseError);
             throw new Error('无法解析服务器响应');
         }
+
+        // 重置按钮状态
         button.classList.remove('loading');
         button.innerHTML = originalText;
         button.disabled = false;
+        isSubmitting = false;
+
         if (!result.success) {
-            var errorMsg = result.details ? ('错误: ' + result.error + '\n代码: ' + (result.details.code || '无') + '\n消息: ' + (result.details.msg || '无')) : result.error;
+            var errorMsg = result.details
+                ? (result.error + ' (代码: ' + (result.details.code || '无') + ', ' + (result.details.msg || '无') + ')')
+                : (result.error || '未知错误');
             throw new Error(errorMsg);
         }
+
         return result;
     } catch (error) {
+        // 重置按钮状态
         button.classList.remove('loading');
         button.innerHTML = originalText;
         button.disabled = false;
+        isSubmitting = false;
         console.error('Error:', error);
         showToast('提交失败：' + error.message, 'error');
         return null;
@@ -367,6 +521,11 @@ function handleEndClick() {
 // ============ 飞书群提交 ============
 
 async function handleSubmitToGroup() {
+    if (isSubmitting) {
+        showToast('正在处理中，请稍候', 'info');
+        return;
+    }
+
     var elements = validateAndGetElements();
     if (!elements) return;
     var startDateText = document.getElementById('startDate').textContent;
@@ -406,17 +565,33 @@ async function handleSubmitToGroup() {
     } else {
         apiUrl = 'http://localhost:3000/.netlify/functions/feishu';
     }
+
     var result = await sendApiRequest(apiUrl, data, document.getElementById('submitToGroupBtn'));
+
     if (result && result.success) {
-        showToast('已发送到飞书群！', 'success');
-        localStorage.removeItem('dailyWordData');
-        resetUI();
+        submittedTargets.group = true;
+        // 显示详细成功信息
+        var detailMsg = '已发送到飞书群！';
+        if (result.details && result.details.msg) {
+            detailMsg = result.details.msg;
+        }
+        showToast(detailMsg, 'success');
+        // 标记按钮为已提交状态
+        document.getElementById('submitToGroupBtn').classList.add('submitted');
+        document.getElementById('submitToGroupBtn').textContent = '已发送 ✓';
+        // 检查是否两个目标都已提交
+        checkAllSubmitted();
     }
 }
 
 // ============ 多维表格提交 ============
 
 async function handleSubmitToTable() {
+    if (isSubmitting) {
+        showToast('正在处理中，请稍候', 'info');
+        return;
+    }
+
     var elements = validateAndGetElements();
     if (!elements) return;
     var startDateText = document.getElementById('startDate').textContent;
@@ -448,11 +623,30 @@ async function handleSubmitToTable() {
     } else {
         apiUrl = 'http://localhost:3000/.netlify/functions/bitable';
     }
+
     var result = await sendApiRequest(apiUrl, data, document.getElementById('submitToTableBtn'));
+
     if (result && result.success) {
-        showToast('已提交到多维表格！', 'success');
+        submittedTargets.table = true;
+        // 显示详细成功信息
+        var detailMsg = '已提交到多维表格！';
+        if (result.details && result.details.msg) {
+            detailMsg = result.details.msg;
+        }
+        showToast(detailMsg, 'success');
+        // 标记按钮为已提交状态
+        document.getElementById('submitToTableBtn').classList.add('submitted');
+        document.getElementById('submitToTableBtn').textContent = '已提交 ✓';
+        // 检查是否两个目标都已提交
+        checkAllSubmitted();
+    }
+}
+
+function checkAllSubmitted() {
+    if (submittedTargets.group && submittedTargets.table) {
+        // 两个目标都提交成功，清除本地数据
         localStorage.removeItem('dailyWordData');
-        resetUI();
+        showToast('所有提交完成！', 'success');
     }
 }
 
@@ -466,19 +660,45 @@ function convertToBitableDate(dateText) {
 
 function handleClearData() {
     localStorage.removeItem('dailyWordData');
+    // 清除所有离线队列数据
+    var keysToRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf('api_backup_') === 0) {
+            keysToRemove.push(key);
+        }
+    }
+    for (var j = 0; j < keysToRemove.length; j++) {
+        localStorage.removeItem(keysToRemove[j]);
+    }
     resetUI();
+    checkOfflineQueue();
     showToast('数据已清除', 'info');
 }
 
 function handleViewData() {
     try {
         var data = localStorage.getItem('dailyWordData');
+        var offlineData = getOfflineQueue();
+        var info = '';
+
         if (data) {
             var parsed = JSON.parse(data);
-            alert('存储的数据:\n' + JSON.stringify(parsed, null, 2));
+            info += '【当前打卡数据】\n' + JSON.stringify(parsed, null, 2);
         } else {
-            alert('没有存储的数据');
+            info += '【当前打卡数据】\n无\n';
         }
+
+        if (offlineData.length > 0) {
+            info += '\n【待重试数据】\n' + offlineData.length + ' 条';
+            for (var i = 0; i < offlineData.length; i++) {
+                info += '\n  ' + (i + 1) + '. ' + offlineData[i].timestamp;
+            }
+        } else {
+            info += '\n【待重试数据】\n无';
+        }
+
+        alert(info);
     } catch (e) {
         alert('读取数据失败: ' + e.message);
     }
@@ -565,8 +785,16 @@ function loadFromLocalStorage() {
 function resetUI() {
     if (startBtn) startBtn.disabled = false;
     if (endBtn) endBtn.disabled = true;
-    if (submitToGroupBtn) submitToGroupBtn.disabled = true;
-    if (submitToTableBtn) submitToTableBtn.disabled = true;
+    if (submitToGroupBtn) {
+        submitToGroupBtn.disabled = true;
+        submitToGroupBtn.classList.remove('submitted');
+        submitToGroupBtn.textContent = '飞书群';
+    }
+    if (submitToTableBtn) {
+        submitToTableBtn.disabled = true;
+        submitToTableBtn.classList.remove('submitted');
+        submitToTableBtn.textContent = '多维表格';
+    }
     document.getElementById('startDate').textContent = '\u00a0';
     document.getElementById('startTime').textContent = '--:--';
     document.getElementById('endDate').textContent = '\u00a0';
@@ -579,6 +807,7 @@ function resetUI() {
     if (durationBar) durationBar.style.display = 'none';
     startDateTime = null;
     endDateTime = null;
+    submittedTargets = { group: false, table: false };
     if (notesTextarea) notesTextarea.value = '';
     // 清空消费记录
     advanceRecords = [];

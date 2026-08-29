@@ -72,6 +72,15 @@
             <button class="btn btn-submit" id="submitToTableBtn" disabled>多维表格</button>
         </section>
 
+        <!-- 离线队列提示 -->
+        <section class="offline-queue-section" id="offlineQueueSection" style="display:none;">
+            <div class="offline-queue-bar">
+                <span class="offline-queue-icon">⚠️</span>
+                <span class="offline-queue-text">有未提交的数据</span>
+                <button class="btn btn-retry-offline" id="offlineQueueBtn" style="display:none;">待重试</button>
+            </div>
+        </section>
+
         <section class="tools-section" id="debugSection" style="display:none;">
             <div class="tools-toggle" id="toolsToggle">
                 <span>工具</span>
