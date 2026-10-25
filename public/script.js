@@ -129,7 +129,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (advanceAmountInput) {
         advanceAmountInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') { e.preventDefault(); advancePurposeInput.focus(); }
-        });
+        
+    // 移动端优化：防止双击缩放
+    function mobileOptimizations() {
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+        
+        // iOS Safari 100vh 修复
+        function setSafeHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', vh + 'px');
+        }
+        setSafeHeight();
+        window.addEventListener('resize', setSafeHeight);
+        window.addEventListener('orientationchange', setSafeHeight);
+    }
+    mobileOptimizations();
+});
     }
     if (advancePurposeInput) {
         advancePurposeInput.addEventListener('keydown', function(e) {
