@@ -43,6 +43,8 @@ function getDiagnostics() {
 
 async function exchangeCode(code) {
     // 步骤 1：用 code 换 user_access_token
+    // 注意：飞书 OAuth v3 token 端点要求 body 里必须带 redirect_uri，
+    // 且必须和授权请求时用的一致，否则报 20063 invalid_request
     const tokenResp = await fetch(ACCOUNTS_BASE + '/oauth/v3/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,6 +52,7 @@ async function exchangeCode(code) {
             client_id: APP_ID,
             client_secret: APP_SECRET,
             code: code,
+            redirect_uri: REDIRECT_URI,
             grant_type: 'authorization_code'
         })
     });
