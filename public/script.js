@@ -1112,6 +1112,11 @@ function renderLoginState() {
         // 隐藏旧的飞书登录按钮
         const loginWrap = document.querySelector('.login-btn-wrap');
         if (loginWrap) loginWrap.style.display = 'none';
+        // 确保管理菜单默认隐藏
+        const adminMenu = document.getElementById('adminMenu');
+        if (adminMenu) adminMenu.style.setProperty('display', 'none', 'important');
+        const adminBackdrop = document.getElementById('adminMenuBackdrop');
+        if (adminBackdrop) adminBackdrop.style.setProperty('display', 'none', 'important');
         const avatar = document.getElementById('userAvatar');
         const name = document.getElementById('userName');
         const myInput = document.getElementById('myUserIdDisplay');
@@ -1252,14 +1257,17 @@ function toggleAdminMenu() {
     const backdrop = document.getElementById('adminMenuBackdrop');
     if (!menu) return;
     
-    const isOpen = menu.style.display !== 'none';
-    if (isOpen) {
-        closeAdminMenu();
-    } else {
-        renderAdminList();
-        menu.style.display = 'block';
-        if (backdrop) backdrop.style.display = 'block';
-    }
+    // 强制重置 display，防止 CSS !important 覆盖
+    menu.style.setProperty('display', 'block', 'important');
+    if (backdrop) backdrop.style.setProperty('display', 'block', 'important');
+    renderAdminList();
+}
+
+function closeAdminMenu() {
+    const menu = document.getElementById('adminMenu');
+    const backdrop = document.getElementById('adminMenuBackdrop');
+    if (menu) menu.style.setProperty('display', 'none', 'important');
+    if (backdrop) backdrop.style.setProperty('display', 'none', 'important');
 }
 
 function closeAdminMenu() {
@@ -1379,3 +1387,35 @@ function getTodayKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+
+
+// ========== 暗色模式 ==========
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('dailyword_theme', newTheme);
+}
+
+function initTheme() {
+    const saved = localStorage.getItem('dailyword_theme');
+    if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+}
+initTheme();
+
+
+// ========== 错误监控 ==========
+window.onerror = function (msg, url, line, col, error) {
+    console.error('[Dailyword Error]', msg, url, line, col, error);
+    // 上报到后端（如果有）
+    return false;
+};
+
+window.addEventListener('unhandledrejection', function (event) {
+    console.error('[Dailyword Unhandled Rejection]', event.reason);
+    event.preventDefault();
+});
