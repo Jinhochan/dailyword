@@ -1030,14 +1030,13 @@ function showErrorPage(message, detail, diagnosis) {
     
     if (uidEl) uidEl.textContent = message;
     if (detailEl) {
-        // 提取飞书返回的详细错误
         let detailText = '';
         if (detail) {
             if (detail.error_description) {
-                detailText += '飞书错误: ' + detail.error_description + '\n';
+                detailText += '飞书 error_description: ' + detail.error_description + '\n';
             }
             if (detail.error) {
-                detailText += '飞书 error code: ' + detail.error + '\n';
+                detailText += '飞书 error: ' + detail.error + '\n';
             }
             if (detail.code) {
                 detailText += '飞书 code: ' + detail.code + '\n';
@@ -1048,13 +1047,16 @@ function showErrorPage(message, detail, diagnosis) {
             if (detail.http_status) {
                 detailText += 'HTTP 状态: ' + detail.http_status + '\n';
             }
-            // 如果以上都没有，原样显示
-            if (!detailText) {
-                detailText = JSON.stringify(detail).slice(0, 500);
+            try {
+                detailText += '\n----- 完整返回 JSON -----\n' + JSON.stringify(detail, null, 2);
+            } catch(e) {
+                detailText += '\n----- JSON stringify failed -----';
             }
         }
         detailEl.textContent = detailText;
         detailEl.style.display = detailText ? 'block' : 'none';
+        detailEl.style.maxHeight = '400px';
+        detailEl.style.overflowY = 'auto';
     }
     
     if (diagEl && diagnosis) {
