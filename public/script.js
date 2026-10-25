@@ -1114,9 +1114,9 @@ function renderLoginState() {
         if (loginWrap) loginWrap.style.display = 'none';
         // 确保管理菜单默认隐藏
         const adminMenu = document.getElementById('adminMenu');
-        if (adminMenu) adminMenu.style.setProperty('display', 'none', 'important');
+        if (adminMenu) adminMenu.classList.remove('open');
         const adminBackdrop = document.getElementById('adminMenuBackdrop');
-        if (adminBackdrop) adminBackdrop.style.setProperty('display', 'none', 'important');
+        if (adminBackdrop) adminBackdrop.classList.remove('open');
         const avatar = document.getElementById('userAvatar');
         const name = document.getElementById('userName');
         const myInput = document.getElementById('myUserIdDisplay');
@@ -1257,17 +1257,19 @@ function toggleAdminMenu() {
     const backdrop = document.getElementById('adminMenuBackdrop');
     if (!menu) return;
     
-    // 强制重置 display，防止 CSS !important 覆盖
-    menu.style.setProperty('display', 'block', 'important');
-    if (backdrop) backdrop.style.setProperty('display', 'block', 'important');
-    renderAdminList();
+    // 用 class 控制显示，避免 inline style 冲突
+    menu.classList.toggle('open');
+    if (backdrop) backdrop.classList.toggle('open');
+    if (menu.classList.contains('open')) {
+        renderAdminList();
+    }
 }
 
 function closeAdminMenu() {
     const menu = document.getElementById('adminMenu');
     const backdrop = document.getElementById('adminMenuBackdrop');
-    if (menu) menu.style.setProperty('display', 'none', 'important');
-    if (backdrop) backdrop.style.setProperty('display', 'none', 'important');
+    if (menu) menu.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
 }
 
 function closeAdminMenu() {

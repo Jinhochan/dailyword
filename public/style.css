@@ -29,16 +29,15 @@ body {
 }
 
 .app {
-    max-width: 420px;
+    max-width: 720px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 20px;
-    padding-top: env(safe-area-inset-top, 20px);
-    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+    padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
     min-height: 100vh;
     min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    box-sizing: border-box;
 }
 
 /* Header 样式已迁移到文件底部的苹果风导航栏 */
@@ -913,6 +912,7 @@ body {
 }
 .admin-menu {
     display: none !important;
+    visibility: hidden !important;
     position: fixed;
     top: 60px;
     right: 16px;
@@ -1118,11 +1118,7 @@ body {
 }
 
 /* app 内容容器 */
-.app {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 20px 40px;
-}
+/* .app 定义已合并到文件顶部 */
 
 
 /* ===== 手机适配 (v2) ===== */
@@ -1515,4 +1511,12 @@ textarea:focus-visible,
 .project-item:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+}
+
+.admin-menu.open {
+    display: block !important;
+    visibility: visible !important;
+}
+.admin-menu-backdrop.open {
+    display: block !important;
 }
