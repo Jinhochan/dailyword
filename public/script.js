@@ -1084,6 +1084,12 @@ function renderLoginState() {
     }
     if (isAdmin(u.user_id)) {
         showScreen('app');
+        // 管理员：显示右上角管理按钮
+        const btnWrap = document.getElementById('adminBtnWrap');
+        if (btnWrap) btnWrap.style.display = 'flex';
+        // 显示我自己的 user_id 到管理面板
+        const myInput = document.getElementById('myUserIdDisplay');
+        if (myInput) myInput.value = u.user_id;
     } else {
         showScreen('unauthorized');
         const uidEl = document.getElementById('unauthUserId');
