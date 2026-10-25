@@ -34,6 +34,43 @@
     </div>
 </div>
 <div id="app" style="display:none;">
+<div id="adminBtnWrap" style="position:fixed;top:16px;right:16px;z-index:90;display:none;">
+    <button onclick="toggleAdminPanel()" style="padding:8px 16px;background:#2c7a7b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(44,122,123,0.3);">⚙️ 管理</button>
+    <button onclick="copyMyUserId()" style="padding:8px 12px;background:#edf2f7;color:#4a5568;border:1px solid #cbd5e0;border-radius:8px;cursor:pointer;font-size:13px;margin-left:4px;" title="复制你的 user_id">📋</button>
+</div>
+<div id="adminPanel" style="display:none;position:fixed;top:60px;right:16px;width:420px;max-height:80vh;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;z-index:100;box-shadow:0 10px 30px rgba(0,0,0,0.15);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:16px;color:#2c7a7b;">⚙️ 访问权限管理</h3>
+        <button onclick="toggleAdminPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#a0aec0;">×</button>
+    </div>
+    <p style="font-size:12px;color:#4a5568;line-height:1.6;margin:0 0 12px;">
+        只有列表中的用户才能访问打卡系统。添加其他人时，需要让对方先用飞书登录，然后让他们截图发自己的 user_id 给你。
+    </p>
+    <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:#4a5568;margin-bottom:4px;">你的 user_id（点击右侧 📋 复制）：</div>
+        <div style="display:flex;gap:4px;align-items:center;">
+            <input type="text" id="myUserIdDisplay" readonly style="flex:1;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;font-family:monospace;color:#2d3748;background:#f7fafc;">
+            <button onclick="copyMyUserId()" style="padding:6px 12px;background:#edf2f7;border:1px solid #cbd5e0;border-radius:4px;cursor:pointer;font-size:12px;">复制</button>
+        </div>
+    </div>
+    <div style="margin-bottom:16px;">
+        <div style="font-size:12px;color:#4a5568;margin-bottom:4px;">添加新用户：</div>
+        <div style="display:flex;gap:4px;">
+            <input type="text" id="newAdminId" placeholder="粘贴对方 user_id（ou_xxx...）" style="flex:1;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;font-family:monospace;">
+            <button onclick="addAdmin()" style="padding:6px 16px;background:#2c7a7b;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">添加</button>
+        </div>
+    </div>
+    <div style="margin-bottom:8px;">
+        <div style="font-size:12px;color:#4a5568;margin-bottom:6px;font-weight:600;">当前白名单（0 人）：</div>
+        <table style="width:100%;font-size:12px;">
+            <tbody id="adminListBody"></tbody>
+        </table>
+    </div>
+    <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px;font-size:11px;color:#a0aec0;line-height:1.5;">
+        💡 提示：白名单存在浏览器 localStorage 里。如果要让其他管理员也能修改白名单，需要同步到后端。目前只有当前浏览器修改有效。
+    </div>
+</div>
+
 
     <div class="app">
         <header class="header">

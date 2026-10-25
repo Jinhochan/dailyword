@@ -968,7 +968,10 @@ function formatTime(date) {
 
 // ========== 飞书登录墙（OAuth）==========
 const FEISHU_LOGIN_API = 'https://bespoke-gecko-4ac4c3.netlify.app/.netlify/functions/login';
-const ADMIN_USER_IDS = ['ou_f1bea8fb03ae624d56c5cbc61fb7ca04'];
+// 管理员白名单：user_id 列表
+// 注意：每个飞书应用里用户的 user_id 不同，需要在对应 app 里登录才能拿到
+// 何锦豪 (dailyword app) = ou_560adde5070154c961cb81c4ceb40c65
+const ADMIN_USER_IDS = ['ou_560adde5070154c961cb81c4ceb40c65'];
 const SESSION_TTL = 24 * 3600 * 1000;  // 24 小时
 
 function getLoginState() {
@@ -1000,7 +1003,7 @@ function logout() {
 }
 
 function isAdmin(userId) {
-    return ADMIN_USER_IDS.includes(userId);
+    return getAdminList().includes(userId);
 }
 
 function hideAllScreens() {
@@ -1182,3 +1185,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     renderLoginState();
 });
+
+
+// ========== 管理员白名单管理 ==========
+function getAdminList() {
+    // 从 localStorage 读白名单（管理员可动态修改）
+    const stored = JSON.parse(localStorage.getItem('dailyword_admins') || 'null');
+    if (stored) return stored;
+    return [...ADMIN_USER_IDS];
+}
+
+function setAdminList(list) {
+    localStorage.setItem('dailyword_admins', JSON.stringify(list));
+}
+
+function isAdminUser() {
+    const u = getLoginState();
+    if (!u) return false;
+    return getAdminList().includes(u.user_id);
+}
+
+function toggleAdminPanel() {
+    const panel = document.getElementById('adminPanel');
+    if (!panel) return;
+    if (isAdminUser()) {
+        renderAdminPanel();
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    } else {
+        alert('只有管理员可以管理白名单');
+    }
+}
+
+function renderAdminPanel() {
+    const list = getAdminList();
+    const tbody = document.getElementById('adminListBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = list.map((uid, i) => `
+        <tr>
+            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${i + 1}</td>
+            <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px;">${uid}</td>
+            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;">
+                <button onclick="removeAdmin(${i})" style="padding:4px 12px;background:#fed7d7;color:#c53030;border:none;border-radius:4px;cursor:pointer;font-size:12px;">移除</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function addAdmin() {
+    const input = document.getElementById('newAdminId');
+    if (!input) return;
+    const uid = input.value.trim();
+    if (!uid) { alert('请输入 user_id'); return; }
+    if (!uid.startsWith('ou_')) { alert('user_id 应以 ou_ 开头'); return; }
+    
+    const list = getAdminList();
+    if (list.includes(uid)) { alert('该用户已在白名单中'); return; }
+    
+    list.push(uid);
+    setAdminList(list);
+    input.value = '';
+    renderAdminPanel();
+    alert('✅ 已添加：' + uid);
+}
+
+function removeAdmin(idx) {
+    const list = getAdminList();
+    if (list.length <= 1) { alert('至少保留一个管理员'); return; }
+    if (!confirm('确定移除 ' + list[idx] + ' 的访问权限？')) return;
+    
+    list.splice(idx, 1);
+    setAdminList(list);
+    renderAdminPanel();
+    alert('已移除');
+}
+
+function copyMyUserId() {
+    const u = getLoginState();
+    if (!u) return;
+    navigator.clipboard.writeText(u.user_id).then(() => {
+        alert('已复制你的 user_id：' + u.user_id);
+    }).catch(() => {
+        prompt('复制你的 user_id：', u.user_id);
+    });
+}
