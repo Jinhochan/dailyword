@@ -1,5 +1,5 @@
 // 缓存名称和版本
-const CACHE_NAME = 'daily-checkin-v19';
+const CACHE_NAME = 'daily-checkin-v20';
 const CACHE_FILES = [
   '/',
   '/index.html',

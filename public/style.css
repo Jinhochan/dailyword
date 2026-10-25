@@ -617,8 +617,8 @@ body {
 
 .project-grid {
     width: 100%;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
 }
 
@@ -1217,6 +1217,15 @@ input, textarea, select {
     gap: 8px;
 }
 .project-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 6px;
+    font-size: 12px;
+}
+.project-item {
     padding: 10px 6px;
     font-size: 12px;
     border-radius: 10px;
@@ -1519,4 +1528,79 @@ textarea:focus-visible,
 }
 .admin-menu-backdrop.open {
     display: block !important;
+}
+
+
+/* 顶部导航栏手机端优化 */
+@media (max-width: 480px) {
+    .header {
+        padding: 10px 12px;
+    }
+    .header-content {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .header-title {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .header-title h1 {
+        font-size: 18px;
+    }
+    .header-title .subtitle {
+        font-size: 11px;
+    }
+    .header-actions {
+        flex: 1 1 auto;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    .user-info {
+        padding: 4px 8px 4px 4px;
+    }
+    .user-avatar {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+    .user-name {
+        max-width: 60px;
+        font-size: 11px;
+    }
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* 操作按钮手机端优化 */
+@media (max-width: 480px) {
+    .page-actions {
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .page-action-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* 消费区域手机端优化 */
+@media (max-width: 480px) {
+    .advance-input-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .advance-input-row input {
+        flex: 1 1 100px;
+        min-width: 0;
+    }
+    .btn-add-advance {
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        border-radius: 12px;
+    }
 }
