@@ -5,6 +5,12 @@ let endDateTime = null;
 // 消费记录数组
 let advanceRecords = [];
 
+// 项目类型（学校）清单
+var SCHOOLS = ["送礼", "吉华", "龙创", "科技城", "立雪", "龙小", "教科院", "龙岗中专", "罗外", "罗幼", "怡景", "金翠园", "粤海城", "平湖", "道远", "龙初", "电信", "代购", "华景园", "龙高", "知新", "宝龙外", "京东改价", "改照片", "报表"];
+
+// 已选项目类型
+let selectedProject = '';
+
 // 提交锁 - 防止重复提交
 let isSubmitting = false;
 
@@ -25,6 +31,7 @@ let notesTextarea = null;
 let addAdvanceBtn = null;
 let advanceAmountInput = null;
 let advancePurposeInput = null;
+let projectSelect = null;
 let advanceListEl = null;
 let advanceTotalEl = null;
 let offlineQueueBtn = null;
@@ -43,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
     addAdvanceBtn = document.getElementById('addAdvanceBtn');
     advanceAmountInput = document.getElementById('advanceAmount');
     advancePurposeInput = document.getElementById('advancePurpose');
+    projectSelect = document.getElementById('projectSelect');
     advanceListEl = document.getElementById('advanceList');
     advanceTotalEl = document.getElementById('advanceTotal');
     offlineQueueBtn = document.getElementById('offlineQueueBtn');
@@ -108,6 +116,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 初始化项目类型选择器
+    initProjectSelect();
+
     // 渲染消费列表
     renderAdvanceList();
 
@@ -129,6 +140,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ============ 项目类型选择 ============
+
+function initProjectSelect() {
+    if (!projectSelect) return;
+    for (var i = 0; i < SCHOOLS.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = SCHOOLS[i];
+        opt.textContent = SCHOOLS[i];
+        projectSelect.appendChild(opt);
+    }
+    projectSelect.addEventListener('change', function() {
+        selectedProject = projectSelect.value;
+        updateProjectHint();
+        saveToLocalStorage();
+    });
+    if (selectedProject) {
+        projectSelect.value = selectedProject;
+    }
+    updateProjectHint();
+}
+
+function updateProjectHint() {
+    var hint = document.getElementById('projectHint');
+    if (!hint) return;
+    hint.textContent = selectedProject ? ('已选：' + selectedProject) : '';
+}
 
 // ============ 消费管理 ============
 
@@ -528,12 +566,20 @@ async function handleSubmitToGroup() {
 
     var elements = validateAndGetElements();
     if (!elements) return;
+    if (!selectedProject) {
+        showToast('请先选择项目类型', 'error');
+        if (projectSelect) projectSelect.focus();
+        return;
+    }
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
 
     // 构建消息内容
     var message = '打卡信息：\n';
     message += '上班日期：' + startDateText + '\n';
+    if (selectedProject) {
+        message += '\u{1f3eb}项目类型：' + selectedProject + '\n';
+    }
     message += '上班时间：' + elements.startTime + '\n';
     message += '下班时间：' + elements.endTime + '\n';
     if (elements.notes) {
@@ -548,6 +594,7 @@ async function handleSubmitToGroup() {
 
     var data = {
         startDate: startDateText,
+        projectType: selectedProject,
         endDate: endDateText,
         startTime: elements.startTime,
         endTime: elements.endTime,
@@ -594,6 +641,11 @@ async function handleSubmitToTable() {
 
     var elements = validateAndGetElements();
     if (!elements) return;
+    if (!selectedProject) {
+        showToast('请先选择项目类型', 'error');
+        if (projectSelect) projectSelect.focus();
+        return;
+    }
     var startDateText = document.getElementById('startDate').textContent;
     var endDateText = document.getElementById('endDate').textContent;
 
@@ -604,6 +656,7 @@ async function handleSubmitToTable() {
     }
 
     var data = {
+        '项目类型': selectedProject,
         '日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '上班日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '下班日期': { type: 'date', value: convertToBitableDate(endDateText) },
@@ -712,7 +765,8 @@ function saveToLocalStorage() {
             startDateTime: startDateTime ? startDateTime.toISOString() : null,
             endDateTime: endDateTime ? endDateTime.toISOString() : null,
             notes: notesTextarea ? notesTextarea.value : '',
-            advanceRecords: advanceRecords
+            advanceRecords: advanceRecords,
+            selectedProject: selectedProject
         };
         localStorage.setItem('dailyWordData', JSON.stringify(data));
     } catch (e) {
@@ -737,6 +791,9 @@ function loadFromLocalStorage() {
             }
             if (notesTextarea && parsed.notes) {
                 notesTextarea.value = parsed.notes;
+            }
+            if (parsed.selectedProject) {
+                selectedProject = parsed.selectedProject;
             }
             // 恢复消费记录
             if (parsed.advanceRecords && Array.isArray(parsed.advanceRecords)) {
@@ -812,6 +869,10 @@ function resetUI() {
     // 清空消费记录
     advanceRecords = [];
     renderAdvanceList();
+    // 清空项目类型
+    selectedProject = '';
+    if (projectSelect) projectSelect.value = '';
+    updateProjectHint();
     saveToLocalStorage();
 }
 

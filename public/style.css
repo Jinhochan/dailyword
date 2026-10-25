@@ -605,3 +605,48 @@ body {
 .btn-submit.submitted:hover {
     background: var(--green);
 }
+
+/* ===== 项目类型选择 ===== */
+.project-section {
+    background: #fff7e6;
+    border: 1px solid #ffd591;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.project-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d46b08;
+}
+
+.project-hint {
+    font-size: 13px;
+    color: #d46b08;
+    font-weight: 500;
+}
+
+.project-select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #ffd591;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+.project-select:focus {
+    outline: none;
+    border-color: #fa8c16;
+}

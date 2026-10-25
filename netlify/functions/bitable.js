@@ -206,6 +206,11 @@ exports.handler = async function(event, context) {
             "备注": formattedData['备注'] || formattedData.notes || ''
         };
 
+        // 项目类型 - 按学校分摊成本；表格无此列时由下方降级逻辑自动移除
+        if (formattedData['项目类型']) {
+            fields['项目类型'] = formattedData['项目类型'];
+        }
+
         // 消费字段 - 写入多维表格（列名是「垫资X」，前端UI显示「💰消费」）
         // ⚠️ 垫资总额必须是数字类型，飞书数字字段不接受格式化字符串
         const consumeRecord = formattedData['消费记录'] || '';
@@ -260,7 +265,7 @@ exports.handler = async function(event, context) {
                     console.log('消费字段不存在，重试（仅核心字段）...');
                     const coreFields = {};
                     for (const [key, value] of Object.entries(fields)) {
-                        if (!['垫资记录', '垫资总额', '垫资次数'].includes(key)) {
+                        if (!['垫资记录', '垫资总额', '垫资次数', '项目类型'].includes(key)) {
                             coreFields[key] = value;
                         }
                     }

@@ -144,6 +144,9 @@ exports.handler = async function(event, context) {
             // 后端构建消息内容
             message = '打卡信息：\n';
             message += '上班日期：' + (formattedData['日期'] || formattedData.startDate) + '\n';
+            if (formattedData.projectType) {
+                message += '\u{1f3eb}项目类型：' + formattedData.projectType + '\n';
+            }
             message += '上班时间：' + (formattedData['上班时间'] || formattedData.startTime) + '\n';
             message += '下班时间：' + (formattedData['下班时间'] || formattedData.endTime) + '\n';
 
