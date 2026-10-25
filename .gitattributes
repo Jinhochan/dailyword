@@ -1,0 +1,34 @@
+# ===== 文本文件统一 LF 行尾（规范化）=====
+* text=auto
+
+# 文本类源码
+*.js     text eol=lf
+*.jsx    text eol=lf
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.css    text eol=lf
+*.scss   text eol=lf
+*.html   text eol=lf
+*.htm    text eol=lf
+*.json   text eol=lf
+*.xml    text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.env    text eol=lf
+*.ttss   text eol=lf
+*.ttml   text eol=lf
+*.properties text eol=lf
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+.env.example   text eol=lf
+
+# ===== 二进制文件不做行尾转换 =====
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.svg  text eol=lf
