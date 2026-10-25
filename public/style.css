@@ -788,3 +788,17 @@ body {
 .login-modal-actions button:not(.primary) {
     background: #edf2f7; border: 1px solid #cbd5e0; color: #4a5568;
 }
+
+
+/* ===== 登录墙 ===== */
+#loading, #unauthorized {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 24px;
+    text-align: center;
+}

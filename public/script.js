@@ -965,17 +965,25 @@ function formatTime(date) {
 
 
 
-// ========== 飞书登录（OAuth 流程）==========
-const FEISHU_LOGIN_API = 'https://bespoke-gecko-4ac4c3.netlify.app/.netlify/functions/login';
 
-// 管理员白名单（user_id）
+// ========== 飞书登录墙（OAuth）==========
+// 流程：
+// 1. 页面加载 → 检查 localStorage 有没有有效登录状态
+// 2. 有 + 是管理员 → 显示 #app
+// 3. 有 + 非管理员 → 显示 #unauthorized
+// 4. 没有 → 自动跳飞书授权页
+// 5. 飞书回调带 code → 调后端 exchange → 存 localStorage → 重定向回干净 URL
+// 6. 第 1 步重跑，这次有状态了
+
+const FEISHU_LOGIN_API = 'https://bespoke-gecko-4ac4c3.netlify.app/.netlify/functions/login';
 const ADMIN_USER_IDS = ['ou_f1bea8fb03ae624d56c5cbc61fb7ca04'];
+const SESSION_TTL = 24 * 3600 * 1000;  // 24 小时
 
 function getLoginState() {
     try {
         const s = JSON.parse(localStorage.getItem('feishu_login') || 'null');
         if (!s) return null;
-        if (Date.now() - s.login_at > 24 * 3600 * 1000) {
+        if (Date.now() - s.login_at > SESSION_TTL) {
             localStorage.removeItem('feishu_login');
             return null;
         }
@@ -988,68 +996,64 @@ function setLoginState(u) {
 }
 
 function logout() {
-    if (!confirm('确认退出登录？')) return;
     localStorage.removeItem('feishu_login');
-    renderLoginUI();
-}
-
-function renderLoginUI() {
-    const u = getLoginState();
-    const bar = document.getElementById('loginBar');
-    const wrap = document.querySelector('.login-btn-wrap');
-    if (!bar || !wrap) return;
-
-    if (u) {
-        bar.style.display = 'flex';
-        wrap.style.display = 'none';
-        const nameEl = document.getElementById('loginName');
-        const roleEl = document.getElementById('loginRole');
-        const avatarEl = document.getElementById('loginAvatar');
-        if (nameEl) nameEl.textContent = u.name || u.user_id;
-        if (roleEl) {
-            const isAdmin = ADMIN_USER_IDS.includes(u.user_id);
-            roleEl.textContent = isAdmin ? '管理员' : '普通用户';
-            roleEl.className = 'login-role ' + (isAdmin ? 'admin' : 'user');
-        }
-        if (avatarEl) {
-            if (u.avatar_url) {
-                avatarEl.innerHTML = '<img src="' + u.avatar_url + '" style="width:28px;height:28px;border-radius:50%;">';
-            } else {
-                avatarEl.textContent = (u.name || '?').slice(0, 1);
-                avatarEl.style.background = '#2B6CB0';
-                avatarEl.style.color = '#fff';
-                avatarEl.style.display = 'flex';
-                avatarEl.style.alignItems = 'center';
-                avatarEl.style.justifyContent = 'center';
-                avatarEl.style.borderRadius = '50%';
-            }
-        }
-    } else {
-        bar.style.display = 'none';
-        wrap.style.display = 'block';
-    }
+    localStorage.removeItem('feishu_oauth_state');
+    sessionStorage.removeItem('feishu_oauth_state');
+    window.location.reload();
 }
 
 function isAdmin(userId) {
     return ADMIN_USER_IDS.includes(userId);
 }
 
-function getLoginConfig() {
-    return fetch(FEISHU_LOGIN_API, { method: 'GET' })
-        .then(r => r.json())
-        .catch(e => { console.warn('login config fetch failed', e); return null; });
+function hideAllScreens() {
+    ['loading', 'unauthorized', 'app'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 }
 
-async function startFeishuLogin() {
-    const config = await getLoginConfig();
-    if (!config || !config.client_id) {
-        alert('无法获取登录配置，请稍后重试');
+function showScreen(id) {
+    hideAllScreens();
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+}
+
+function renderLoginState() {
+    const u = getLoginState();
+    if (!u) {
+        // 没登录，跳飞书授权
+        redirectToFeishuAuth();
         return;
     }
-    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    // 存储 state 到 sessionStorage，回调时校验（防 CSRF）
-    sessionStorage.setItem('feishu_oauth_state', state);
+    if (isAdmin(u.user_id)) {
+        // 管理员，显示打卡内容
+        showScreen('app');
+    } else {
+        // 非管理员，显示无权限页
+        showScreen('unauthorized');
+        const uidEl = document.getElementById('unauthUserId');
+        if (uidEl) uidEl.textContent = u.user_id;
+    }
+}
 
+async function redirectToFeishuAuth() {
+    const config = await fetch(FEISHU_LOGIN_API, { method: 'GET' }).then(r => r.json()).catch(e => {
+        console.error('login config fetch failed', e);
+        return null;
+    });
+    
+    if (!config || !config.client_id) {
+        // 后端配置接口失败，显示错误
+        showScreen('unauthorized');
+        const uidEl = document.getElementById('unauthUserId');
+        if (uidEl) uidEl.textContent = '登录服务暂不可用，请稍后重试';
+        return;
+    }
+    
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem('feishu_oauth_state', state);
+    
     const authUrl = config.base_url + '?' + new URLSearchParams({
         client_id: config.client_id,
         redirect_uri: config.redirect_uri,
@@ -1065,17 +1069,21 @@ async function handleCallbackCode() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     const state = params.get('state');
+    
     if (!code) return false;
-
+    
     // 校验 state（防 CSRF）
     const savedState = sessionStorage.getItem('feishu_oauth_state');
     if (savedState && state && savedState !== state) {
-        console.error('state mismatch (CSRF?):', savedState, state);
-        alert('登录状态校验失败，请重试');
+        console.error('state mismatch (CSRF):', savedState, 'vs', state);
+        showScreen('unauthorized');
+        const uidEl = document.getElementById('unauthUserId');
+        if (uidEl) uidEl.textContent = '登录状态校验失败，请重试';
         sessionStorage.removeItem('feishu_oauth_state');
+        return true;
     }
     sessionStorage.removeItem('feishu_oauth_state');
-
+    
     // 调后端 exchange API
     try {
         const r = await fetch(FEISHU_LOGIN_API, {
@@ -1083,10 +1091,17 @@ async function handleCallbackCode() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: code })
         });
+        
         if (!r.ok) {
             const err = await r.json().catch(() => ({}));
             console.error('login exchange failed', r.status, err);
-            alert('登录失败：' + (err.error || r.status) + '，请重试');
+            // 显示错误信息
+            showScreen('unauthorized');
+            const uidEl = document.getElementById('unauthUserId');
+            if (uidEl) {
+                const diag = err.diagnosis ? `\n诊断: secret=${err.diagnosis.app_secret_set}(${err.diagnosis.app_secret_length})` : '';
+                uidEl.textContent = `登录失败: ${err.error || r.status}${diag}`;
+            }
         } else {
             const u = await r.json();
             console.log('login success:', u);
@@ -1094,35 +1109,26 @@ async function handleCallbackCode() {
         }
     } catch(e) {
         console.error('login exchange error', e);
-        alert('登录出错，请重试');
+        showScreen('unauthorized');
+        const uidEl = document.getElementById('unauthUserId');
+        if (uidEl) uidEl.textContent = '登录出错: ' + e.message;
     }
+    
     // 清理 URL 里的 code（防泄露）
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState(null, '', cleanUrl);
     return true;
 }
 
-// 启动时：先处理回调 code，再渲染 UI
+// ========== 启动流程 ==========
 document.addEventListener('DOMContentLoaded', async () => {
+    // 先隐藏所有屏
+    hideAllScreens();
+    showScreen('loading');
+    
+    // 处理飞书回调 code
     const hadCode = await handleCallbackCode();
-    renderLoginUI();
-    if (hadCode) {
-        setTimeout(() => alert('✅ 登录成功'), 200);
-    }
+    
+    // 渲染登录状态
+    renderLoginState();
 });
-
-// 让 submitCheckIn 附带 user_id
-const _origSubmit = window.submitCheckIn;
-if (typeof _origSubmit === 'function') {
-    window.submitCheckIn = async function() {
-        const u = getLoginState();
-        if (u) {
-            window.currentLoginUser = {
-                user_id: u.user_id,
-                name: u.name,
-                role: isAdmin(u.user_id) ? 'admin' : 'user'
-            };
-        }
-        return _origSubmit.call(this);
-    };
-}
