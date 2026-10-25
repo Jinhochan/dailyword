@@ -1,3 +1,23 @@
+
+
+// ========== 清除旧打卡数据 ==========
+function clearOldCheckinData() {
+    // 清除所有 dailyword_checkin_* 的旧数据
+    Object.keys(localStorage).forEach(function (key) {
+        if (key.startsWith('dailyword_checkin_') || key.startsWith('dailyword_advance_')) {
+            // 只保留今天的数据
+            var todayKey = getTodayKey();
+            if (!key.endsWith('_' + todayKey) && !key.endsWith(todayKey)) {
+                localStorage.removeItem(key);
+            }
+        }
+    });
+}
+
+// 在页面加载时立即清除旧数据
+window.addEventListener('DOMContentLoaded', function () {
+    clearOldCheckinData();
+});
 // 全局变量
 let startDateTime = null;
 let endDateTime = null;
