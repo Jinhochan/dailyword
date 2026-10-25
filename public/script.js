@@ -1084,11 +1084,18 @@ function renderLoginState() {
     }
     if (isAdmin(u.user_id)) {
         showScreen('app');
-        // 管理员：显示右上角管理按钮
-        const btnWrap = document.getElementById('adminBtnWrap');
-        if (btnWrap) btnWrap.style.display = 'flex';
-        // 显示我自己的 user_id 到管理面板
+        // 管理员：显示顶部导航栏的用户信息 + 管理按钮
+        const actions = document.getElementById('headerActions');
+        if (actions) actions.style.display = 'flex';
+        const avatar = document.getElementById('userAvatar');
+        const name = document.getElementById('userName');
         const myInput = document.getElementById('myUserIdDisplay');
+        if (avatar && u.avatar_url) {
+            avatar.innerHTML = '<img src="' + u.avatar_url + '" alt="">';
+        } else if (avatar) {
+            avatar.textContent = (u.name || '?').slice(0, 1);
+        }
+        if (name) name.textContent = u.name || '管理员';
         if (myInput) myInput.value = u.user_id;
     } else {
         showScreen('unauthorized');
@@ -1211,31 +1218,51 @@ function isAdminUser() {
     return getAdminList().includes(u.user_id);
 }
 
-function toggleAdminPanel() {
-    const panel = document.getElementById('adminPanel');
-    if (!panel) return;
-    if (isAdminUser()) {
-        renderAdminPanel();
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    } else {
+function toggleAdminMenu() {
+    if (!isAdminUser()) {
         alert('只有管理员可以管理白名单');
+        return;
+    }
+    const menu = document.getElementById('adminMenu');
+    const backdrop = document.getElementById('adminMenuBackdrop');
+    if (!menu) return;
+    
+    const isOpen = menu.style.display !== 'none';
+    if (isOpen) {
+        closeAdminMenu();
+    } else {
+        renderAdminList();
+        menu.style.display = 'block';
+        if (backdrop) backdrop.style.display = 'block';
     }
 }
 
-function renderAdminPanel() {
+function closeAdminMenu() {
+    const menu = document.getElementById('adminMenu');
+    const backdrop = document.getElementById('adminMenuBackdrop');
+    if (menu) menu.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
+}
+
+function renderAdminList() {
     const list = getAdminList();
-    const tbody = document.getElementById('adminListBody');
-    if (!tbody) return;
+    const container = document.getElementById('adminListContainer');
+    const countEl = document.getElementById('adminListCount');
+    const u = getLoginState();
+    if (!container) return;
     
-    tbody.innerHTML = list.map((uid, i) => `
-        <tr>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${i + 1}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px;">${uid}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;">
-                <button onclick="removeAdmin(${i})" style="padding:4px 12px;background:#fed7d7;color:#c53030;border:none;border-radius:4px;cursor:pointer;font-size:12px;">移除</button>
-            </td>
-        </tr>
-    `).join('');
+    if (countEl) countEl.textContent = list.length;
+    
+    container.innerHTML = list.map((uid, i) => {
+        const isMe = u && uid === u.user_id;
+        const displayName = uid.length > 24 ? uid.slice(0, 12) + '...' + uid.slice(-8) : uid;
+        return `
+            <div class="admin-list-item ${isMe ? 'is-me' : ''}">
+                <span>${displayName}</span>
+                <button onclick="removeAdmin(${i})">移除</button>
+            </div>
+        `;
+    }).join('');
 }
 
 function addAdmin() {
