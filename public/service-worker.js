@@ -1,5 +1,5 @@
 // 缓存名称和版本
-const CACHE_NAME = 'daily-checkin-v24';
+const CACHE_NAME = 'daily-checkin-v25';
 const CACHE_FILES = [
   '/',
   '/index.html',
@@ -13,7 +13,7 @@ const CACHE_FILES = [
   '/icon-180.png'
 ];
 
-// 安装阶段 - 缓存关键资源
+// 安装阶段 - 缓存关键资源（用于离线）
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -25,11 +25,10 @@ self.addEventListener('install', event => {
         console.error('缓存失败:', error);
       })
   );
-  // 跳过等待，立即激活新的service worker
   self.skipWaiting();
 });
 
-// 激活阶段 - 清理旧缓存
+// 激活阶段 - 清理所有旧缓存
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -43,65 +42,49 @@ self.addEventListener('activate', event => {
       );
     })
   );
-  // 立即获取控制权
   return self.clients.claim();
 });
 
-// 拦截网络请求 - 提供离线支持
+// 拦截网络请求 - 网络优先，离线后备用缓存
 self.addEventListener('fetch', event => {
-  // 对于API请求，我们不缓存，因为它们包含动态数据
-  if (event.request.url.includes('/.netlify/functions/')) {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          // 返回离线状态响应
-          return new Response(
-            JSON.stringify({ offline: true, message: '离线模式，无法连接到服务器' }),
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-        })
-    );
-    return;
-  }
+  // 只处理 GET 请求
+  if (event.request.method !== 'GET') return;
 
-  // 对于静态资源，使用缓存优先策略
+  // 跳过跨域请求
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
+  // 跳过非资源请求（导航请求）
+  if (event.request.mode === 'navigate') return;
+
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        // 如果缓存命中，直接返回缓存的资源
-        if (response) {
-          return response;
+        // 只缓存成功的响应
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
         }
-
-        // 否则从网络获取
-        return fetch(event.request).then(
-          networkResponse => {
-            // 如果响应有效，将其克隆并添加到缓存
-            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-              const responseToCache = networkResponse.clone();
-              
-              caches.open(CACHE_NAME)
-                .then(cache => {
-                  cache.put(event.request, responseToCache);
-                });
-            }
-            
-            return networkResponse;
+        return response;
+      })
+      .catch(() => {
+        // 网络失败，从缓存取
+        return caches.match(event.request).then(cachedResponse => {
+          if (cachedResponse) {
+            console.log('从缓存返回:', event.request.url);
+            return cachedResponse;
           }
-        ).catch(() => {
-          // 如果网络请求失败，返回一个默认的离线页面或错误信息
-          return new Response(
-            '<h1>离线模式</h1><p>请检查您的网络连接</p>',
-            { headers: { 'Content-Type': 'text/html' } }
-          );
+          // 都失败，返回空响应
+          return new Response('离线模式', { status: 503, statusText: 'Offline' });
         });
       })
   );
 });
 
-// 监听消息 - 允许页面与service worker通信
+// 消息处理
 self.addEventListener('message', event => {
-  if (event.data.action === 'skipWaiting') {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
