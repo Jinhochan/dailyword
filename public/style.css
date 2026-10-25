@@ -1244,18 +1244,7 @@ input, textarea, select {
 }
 
 /* 管理菜单手机端全屏 */
-@media (max-width: 480px) {
-    .admin-menu {
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        max-width: 100%;
-        max-height: 100vh;
-        max-height: 100dvh;
-        border-radius: 0;
-    }
+
     .admin-menu-header {
         padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
         position: sticky;
@@ -1284,10 +1273,7 @@ input, textarea, select {
 }
 
 /* 小屏手机（< 380px） */
-@media (max-width: 380px) {
-    .header-title h1 {
-        font-size: 20px;
-    }
+
     .header-title .subtitle {
         font-size: 12px;
     }
@@ -1358,12 +1344,7 @@ input, textarea, select {
 }
 
 /* 打卡按钮手机优化（覆盖原来的样式） */
-@media (max-width: 480px) {
-    .action-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
+
     .btn-start, .btn-end {
         width: 100%;
         min-height: 52px;
@@ -1418,10 +1399,7 @@ input, textarea, select {
     color: #ff3b30;
 }
 
-@media (max-width: 480px) {
-    .page-actions {
-        margin-bottom: 12px;
-    }
+
     .page-action-btn {
         width: 48px;
         height: 48px;
@@ -1532,10 +1510,7 @@ textarea:focus-visible,
 
 
 /* 顶部导航栏手机端优化 */
-@media (max-width: 480px) {
-    .header {
-        padding: 10px 12px;
-    }
+
     .header-content {
         flex-wrap: wrap;
         gap: 8px;
@@ -1574,10 +1549,83 @@ textarea:focus-visible,
 }
 
 /* 操作按钮手机端优化 */
+
+    .page-action-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* 消费区域手机端优化 */
+
+    .advance-input-row input {
+        flex: 1 1 100px;
+        min-width: 0;
+    }
+    .btn-add-advance {
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        border-radius: 12px;
+    }
+}
+
+
+/* 手机端顶部导航栏：标题独占一行 */
+@media (max-width: 480px) {
+    .header {
+        padding: 10px 12px;
+    }
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .header-title {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .header-title h1 {
+        font-size: 18px;
+        margin: 0;
+    }
+    .header-title .subtitle {
+        font-size: 11px;
+        margin: 0;
+    }
+    .header-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+    .user-info {
+        padding: 4px 10px 4px 4px;
+    }
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    .user-name {
+        max-width: 80px;
+        font-size: 12px;
+    }
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* 手机端操作按钮：居中 */
 @media (max-width: 480px) {
     .page-actions {
         justify-content: center;
-        gap: 10px;
+        gap: 12px;
         margin-bottom: 12px;
     }
     .page-action-btn {
@@ -1586,7 +1634,44 @@ textarea:focus-visible,
     }
 }
 
-/* 消费区域手机端优化 */
+/* 手机端项目类型：强制 grid 布局（!important 覆盖 flex） */
+@media (max-width: 480px) {
+    .project-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+    }
+    .project-item {
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 10px 6px !important;
+        font-size: 12px !important;
+    }
+}
+
+/* 手机端时间卡片：横向排列 */
+@media (max-width: 480px) {
+    .time-cards {
+        flex-direction: row;
+        gap: 8px;
+    }
+    .time-card {
+        flex: 1;
+        padding: 12px 8px;
+    }
+    .time-value {
+        font-size: 24px;
+    }
+    .time-date {
+        font-size: 10px;
+    }
+}
+
+/* 手机端消费区域 */
 @media (max-width: 480px) {
     .advance-input-row {
         flex-wrap: wrap;
@@ -1602,5 +1687,220 @@ textarea:focus-visible,
         height: 48px;
         padding: 0;
         border-radius: 12px;
+    }
+}
+
+/* 手机端打卡按钮：垂直排列 */
+@media (max-width: 480px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .btn-start, .btn-end {
+        width: 100%;
+        min-height: 52px;
+        font-size: 16px;
+    }
+}
+
+
+/* ===== 手机端布局（参考截图：网格并排，不是长条）===== */
+@media (max-width: 480px) {
+    /* 顶部导航栏 */
+    .header {
+        padding: 10px 12px;
+    }
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .header-title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        width: 100%;
+    }
+    .header-title h1 {
+        font-size: 18px;
+        margin: 0;
+    }
+    .header-title .subtitle {
+        font-size: 12px;
+        margin: 0;
+    }
+    .header-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+    .user-info {
+        padding: 4px 10px 4px 4px;
+    }
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    .user-name {
+        max-width: 80px;
+        font-size: 12px;
+    }
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* 手机端时间卡片：上班/下班横向并排 */
+@media (max-width: 480px) {
+    .time-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .time-card {
+        padding: 12px 8px;
+        border-radius: 12px;
+    }
+    .time-label {
+        font-size: 12px;
+    }
+    .time-value {
+        font-size: 24px;
+    }
+    .time-date {
+        font-size: 10px;
+    }
+}
+
+/* 手机端打卡按钮：横向并排 */
+@media (max-width: 480px) {
+    .action-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+    }
+    .btn-start, .btn-end {
+        flex: 1;
+        min-height: 48px;
+        font-size: 14px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+    .btn-icon {
+        font-size: 16px;
+    }
+}
+
+/* 手机端消费区域：横向布局 */
+@media (max-width: 480px) {
+    .advance-section {
+        padding: 12px;
+    }
+    .advance-input-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    .advance-amount {
+        flex: 1;
+        min-width: 60px;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+    .advance-purpose {
+        flex: 2;
+        min-width: 80px;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+    .btn-add-advance {
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 10px;
+        font-size: 18px;
+    }
+}
+
+/* 手机端项目类型：网格并排（3 列） */
+@media (max-width: 480px) {
+    .project-section {
+        padding: 12px;
+    }
+    .project-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+    }
+    .project-item {
+        min-height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 8px 4px !important;
+        font-size: 12px !important;
+        border-radius: 8px !important;
+        line-height: 1.2 !important;
+        word-break: keep-all;
+    }
+}
+
+/* 手机端备注 */
+@media (max-width: 480px) {
+    .notes textarea {
+        min-height: 60px;
+        padding: 10px 12px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+}
+
+/* 手机端操作按钮：居中横排 */
+@media (max-width: 480px) {
+    .page-actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .page-action-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+}
+
+/* 手机端提交按钮 */
+@media (max-width: 480px) {
+    .submit-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+    }
+    .btn-submit {
+        flex: 1;
+        min-height: 48px;
+        font-size: 14px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+}
+
+/* 手机端工具栏 */
+@media (max-width: 480px) {
+    .tools-section {
+        padding: 8px 0;
+    }
+    .tools-toggle {
+        padding: 8px 12px;
+        font-size: 13px;
     }
 }
