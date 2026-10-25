@@ -961,3 +961,152 @@ function formatTime(date) {
     var m = date.getMinutes().toString().padStart(2, '0');
     return h + ':' + m;
 }
+
+
+
+
+// ========== 飞书登录（OAuth 流程）==========
+const FEISHU_LOGIN_API = 'https://bespoke-gecko-4ac4c3.netlify.app/.netlify/functions/login';
+
+// 管理员白名单（user_id）
+const ADMIN_USER_IDS = ['ou_f1bea8fb03ae624d56c5cbc61fb7ca04'];
+
+function getLoginState() {
+    try {
+        const s = JSON.parse(localStorage.getItem('feishu_login') || 'null');
+        if (!s) return null;
+        if (Date.now() - s.login_at > 24 * 3600 * 1000) {
+            localStorage.removeItem('feishu_login');
+            return null;
+        }
+        return s;
+    } catch(e) { return null; }
+}
+
+function setLoginState(u) {
+    localStorage.setItem('feishu_login', JSON.stringify(u));
+}
+
+function logout() {
+    if (!confirm('确认退出登录？')) return;
+    localStorage.removeItem('feishu_login');
+    renderLoginUI();
+}
+
+function renderLoginUI() {
+    const u = getLoginState();
+    const bar = document.getElementById('loginBar');
+    const wrap = document.querySelector('.login-btn-wrap');
+    if (!bar || !wrap) return;
+
+    if (u) {
+        bar.style.display = 'flex';
+        wrap.style.display = 'none';
+        const nameEl = document.getElementById('loginName');
+        const roleEl = document.getElementById('loginRole');
+        const avatarEl = document.getElementById('loginAvatar');
+        if (nameEl) nameEl.textContent = u.name || u.user_id;
+        if (roleEl) {
+            const isAdmin = ADMIN_USER_IDS.includes(u.user_id);
+            roleEl.textContent = isAdmin ? '管理员' : '普通用户';
+            roleEl.className = 'login-role ' + (isAdmin ? 'admin' : 'user');
+        }
+        if (avatarEl) {
+            if (u.avatar_url) {
+                avatarEl.innerHTML = '<img src="' + u.avatar_url + '" style="width:28px;height:28px;border-radius:50%;">';
+            } else {
+                avatarEl.textContent = (u.name || '?').slice(0, 1);
+                avatarEl.style.background = '#2B6CB0';
+                avatarEl.style.color = '#fff';
+                avatarEl.style.display = 'flex';
+                avatarEl.style.alignItems = 'center';
+                avatarEl.style.justifyContent = 'center';
+                avatarEl.style.borderRadius = '50%';
+            }
+        }
+    } else {
+        bar.style.display = 'none';
+        wrap.style.display = 'block';
+    }
+}
+
+function isAdmin(userId) {
+    return ADMIN_USER_IDS.includes(userId);
+}
+
+function getLoginConfig() {
+    return fetch(FEISHU_LOGIN_API, { method: 'GET' })
+        .then(r => r.json())
+        .catch(e => { console.warn('login config fetch failed', e); return null; });
+}
+
+async function startFeishuLogin() {
+    const config = await getLoginConfig();
+    if (!config || !config.app_id) {
+        alert('无法获取登录配置，请稍后重试');
+        return;
+    }
+    const authUrl = config.base_url + '?' + new URLSearchParams({
+        app_id: config.app_id,
+        redirect_uri: config.redirect_uri,
+        state: Date.now().toString(36)  // 防 CSRF
+    });
+    console.log('跳转飞书授权:', authUrl);
+    window.location.href = authUrl;
+}
+
+async function handleCallbackCode() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return false;
+
+    // 调后端 exchange API
+    try {
+        const r = await fetch(FEISHU_LOGIN_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
+        });
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            console.error('login exchange failed', r.status, err);
+            alert('登录失败：' + (err.error || r.status) + '，请重试');
+        } else {
+            const u = await r.json();
+            console.log('login success:', u);
+            setLoginState(u);
+        }
+    } catch(e) {
+        console.error('login exchange error', e);
+        alert('登录出错，请重试');
+    }
+    // 清理 URL 里的 code（防泄露）
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState(null, '', cleanUrl);
+    return true;
+}
+
+// 启动时：先处理回调 code，再渲染 UI
+document.addEventListener('DOMContentLoaded', async () => {
+    const hadCode = await handleCallbackCode();
+    renderLoginUI();
+    if (hadCode) {
+        setTimeout(() => alert('✅ 登录成功'), 200);
+    }
+});
+
+// 让 submitCheckIn 附带 user_id
+const _origSubmit = window.submitCheckIn;
+if (typeof _origSubmit === 'function') {
+    window.submitCheckIn = async function() {
+        const u = getLoginState();
+        if (u) {
+            window.currentLoginUser = {
+                user_id: u.user_id,
+                name: u.name,
+                role: isAdmin(u.user_id) ? 'admin' : 'user'
+            };
+        }
+        return _origSubmit.call(this);
+    };
+}

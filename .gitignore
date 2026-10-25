@@ -22,3 +22,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# 本地凭据（飞书/Netlify），勿提交
+app_secret.txt
