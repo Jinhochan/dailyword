@@ -1327,3 +1327,55 @@ function copyMyUserId() {
         prompt('复制你的 user_id：', u.user_id);
     });
 }
+
+
+// ========== 页面操作函数 ==========
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToBottom() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function clearCheckinData() {
+    if (!confirm('确定清除今日打卡数据？此操作不可撤销。')) {
+        return;
+    }
+    
+    // 清除 localStorage 里的打卡数据
+    localStorage.removeItem('dailyword_checkin_' + getTodayKey());
+    localStorage.removeItem('dailyword_checkin_data');
+    
+    // 重置页面显示
+    document.getElementById('startTime').textContent = '--:--';
+    document.getElementById('endTime').textContent = '--:--';
+    document.getElementById('startDate').innerHTML = '&nbsp;';
+    document.getElementById('endDate').innerHTML = '&nbsp;';
+    document.getElementById('durationBar').style.display = 'none';
+    
+    // 重置按钮状态
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('endBtn').disabled = true;
+    document.getElementById('submitToGroupBtn').disabled = true;
+    document.getElementById('submitToTableBtn').disabled = true;
+    
+    // 清空输入框
+    document.getElementById('advanceAmount').value = '';
+    document.getElementById('advancePurpose').value = '';
+    document.getElementById('notes').value = '';
+    document.getElementById('projectSection').classList.remove('active');
+    
+    // 清空消费记录
+    localStorage.removeItem('dailyword_advance_' + getTodayKey());
+    if (typeof renderAdvanceList === 'function') {
+        renderAdvanceList();
+    }
+    
+    alert('✅ 已清除今日打卡数据');
+}
+
+function getTodayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
