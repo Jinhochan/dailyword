@@ -1042,14 +1042,20 @@ function getLoginConfig() {
 
 async function startFeishuLogin() {
     const config = await getLoginConfig();
-    if (!config || !config.app_id) {
+    if (!config || !config.client_id) {
         alert('无法获取登录配置，请稍后重试');
         return;
     }
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    // 存储 state 到 sessionStorage，回调时校验（防 CSRF）
+    sessionStorage.setItem('feishu_oauth_state', state);
+
     const authUrl = config.base_url + '?' + new URLSearchParams({
-        app_id: config.app_id,
+        client_id: config.client_id,
         redirect_uri: config.redirect_uri,
-        state: Date.now().toString(36)  // 防 CSRF
+        response_type: 'code',
+        scope: config.scope || 'auth:user.id:read',
+        state: state
     });
     console.log('跳转飞书授权:', authUrl);
     window.location.href = authUrl;
@@ -1058,7 +1064,17 @@ async function startFeishuLogin() {
 async function handleCallbackCode() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    const state = params.get('state');
     if (!code) return false;
+
+    // 校验 state（防 CSRF）
+    const savedState = sessionStorage.getItem('feishu_oauth_state');
+    if (savedState && state && savedState !== state) {
+        console.error('state mismatch (CSRF?):', savedState, state);
+        alert('登录状态校验失败，请重试');
+        sessionStorage.removeItem('feishu_oauth_state');
+    }
+    sessionStorage.removeItem('feishu_oauth_state');
 
     // 调后端 exchange API
     try {

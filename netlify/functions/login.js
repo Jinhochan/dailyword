@@ -1,15 +1,23 @@
 // 飞书 OAuth 登录（Netlify Functions）
-// GET  /login?code=xxx     —— 用 code 换 user_id（飞书回调时浏览器直接跳这里）
-// POST /login/exchange     —— 同上，前端 fetch 调用
-// GET  /login              —— 返回 {app_id, base_url, redirect_uri} 供前端生成授权 URL
+// 参考：https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/authen-v1/login-overview
 //
-// 回调域名（飞书后台配置）：https://bespoke-gecko-4ac4c3.netlify.app/
-// 飞书回调 redirect_uri：  https://bespoke-gecko-4ac4c3.netlify.app/  （前端页面本身）
+// 流程：
+// 1. 前端跳 https://accounts.feishu.cn/open-apis/authen/v1/authorize?client_id=&redirect_uri=&response_type=code&scope=
+// 2. 飞书回调到 redirect_uri，URL 带 ?code=xxx&state=yyy
+// 3. 前端 fetch POST /login/exchange { code }
+// 4. 后端调 https://accounts.feishu.cn/oauth/v3/token 用 code 换 user_access_token
+// 5. 后端用 user_access_token 调 GET https://open.feishu.cn/open-apis/authen/v1/user_info
+// 6. 返回 user_id / name / avatar_url 给前端
 
-const APP_ID = process.env.FEISHU_APP_ID;
-const APP_SECRET = process.env.FEISHU_APP_SECRET;
+const APP_ID = process.env.FEISHU_APP_ID;       // = client_id
+const APP_SECRET = process.env.FEISHU_APP_SECRET; // = client_secret
 const REDIRECT_URI = 'https://bespoke-gecko-4ac4c3.netlify.app/';
-const FEISHU_BASE = 'https://open.feishu.cn';
+const OPEN_BASE = 'https://open.feishu.cn';
+const ACCOUNTS_BASE = 'https://accounts.feishu.cn';
+
+// 默认请求的 scope（空格分隔）
+// auth:user.id:read 是基础权限，contact 相关是通讯录
+const DEFAULT_SCOPE = 'auth:user.id:read contact:user.base:readonly contact:contact.base:readonly';
 
 function setCORS() {
     return {
@@ -19,65 +27,70 @@ function setCORS() {
     };
 }
 
-async function getTenantToken() {
-    const resp = await fetch(FEISHU_BASE + '/open-apis/auth/v3/tenant_access_token/internal', {
+async function exchangeCode(code) {
+    // 步骤 1：用 code 换 user_access_token
+    // 端点：https://accounts.feishu.cn/oauth/v3/token (v3 版本)
+    // Content-Type: application/x-www-form-urlencoded (RFC 标准，v3 也兼容 json)
+    // 关键：用 client_id + client_secret（不是 app_id）
+    const tokenResp = await fetch(ACCOUNTS_BASE + '/oauth/v3/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_id: APP_ID, app_secret: APP_SECRET })
+        body: JSON.stringify({
+            client_id: APP_ID,
+            client_secret: APP_SECRET,
+            code: code,
+            grant_type: 'authorization_code'
+        })
     });
-    const d = await resp.json();
-    if (!d.tenant_access_token) {
-        throw new Error('tenant token failed: ' + JSON.stringify(d));
-    }
-    return d.tenant_access_token;
-}
 
-async function exchangeCode(code) {
-    const token = await getTenantToken();
+    const tokenData = await tokenResp.json();
 
-    // 1. 用 code 换 access_token
-    const codeResp = await fetch(FEISHU_BASE + '/open-apis/authen/v1/access_token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ grant_type: 'authorization_code', code: code })
-    });
-    const codeData = await codeResp.json();
-
-    if (codeData.code !== 0) {
-        return { ok: false, error: 'code exchange failed', detail: codeData };
+    if (!tokenData.access_token) {
+        return {
+            ok: false,
+            error: 'token exchange failed',
+            detail: tokenData,
+            http_status: tokenResp.status
+        };
     }
 
-    const accessToken = codeData.data.access_token;
+    const userAccessToken = tokenData.access_token;
 
-    // 2. 用 access_token 拿 user_info
-    const userResp = await fetch(FEISHU_BASE + '/open-apis/authen/v1/user_info', {
+    // 步骤 2：用 user_access_token 拿用户信息
+    // 端点：https://open.feishu.cn/open-apis/authen/v1/user_info
+    // Header: Authorization: Bearer <user_access_token>
+    const userResp = await fetch(OPEN_BASE + '/open-apis/authen/v1/user_info', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + accessToken
+            'Authorization': 'Bearer ' + userAccessToken
         }
     });
+
     const userData = await userResp.json();
 
     if (userData.code !== 0) {
-        return { ok: false, error: 'user info failed', detail: userData };
+        return {
+            ok: false,
+            error: 'user info failed',
+            detail: userData,
+            http_status: userResp.status
+        };
     }
 
     const u = userData.data || {};
     return {
         ok: true,
         user: {
-            user_id: u.user_id,
+            user_id: u.open_id,            // 用 open_id 作为 user_id（user_id 字段需要额外权限）
             union_id: u.union_id,
             name: u.name,
             email: u.email,
             avatar_url: u.avatar_url,
             mobile: u.mobile,
             tenant_key: u.tenant_key,
-            login_at: Date.now()
+            login_at: Date.now(),
+            scopes: tokenData.scope || ''  // 记录本次授予的 scope
         }
     };
 }
@@ -88,22 +101,9 @@ exports.handler = async (event, context) => {
     }
 
     const headers = setCORS();
+    headers['Content-Type'] = 'application/json';
 
-    // 1. GET /login?code=xxx —— 飞书回调，浏览器直接跳这里
-    if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.code) {
-        const code = event.queryStringParameters.code;
-        const result = await exchangeCode(code);
-
-        if (!result.ok) {
-            return { statusCode: 400, headers: headers, body: JSON.stringify(result) };
-        }
-
-        // 返回 JSON（前端 fetch 用），同时加 Content-Type
-        headers['Content-Type'] = 'application/json';
-        return { statusCode: 200, headers: headers, body: JSON.stringify(result.user) };
-    }
-
-    // 2. POST /login/exchange —— 前端 fetch 调（带 JSON body { code }）
+    // 1. POST /login/exchange —— 前端 fetch 调（带 JSON body { code }）
     if (event.httpMethod === 'POST' && event.path === '/.netlify/functions/login') {
         let body;
         try {
@@ -115,21 +115,33 @@ exports.handler = async (event, context) => {
         if (!code) {
             return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'code required' }) };
         }
+
         const result = await exchangeCode(code);
         if (!result.ok) {
             return { statusCode: 400, headers: headers, body: JSON.stringify(result) };
         }
-        headers['Content-Type'] = 'application/json';
         return { statusCode: 200, headers: headers, body: JSON.stringify(result.user) };
     }
 
-    // 3. GET /login —— 返回配置
+    // 2. GET /login?code=xxx —— 飞书回调时浏览器直接跳这里（备选）
+    //    实际用 redirect_uri 指向前端页面，飞书回调到前端，前端再 fetch 后端
+    //    但保留这个端点作为兜底
+    if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.code) {
+        const code = event.queryStringParameters.code;
+        const result = await exchangeCode(code);
+        if (!result.ok) {
+            return { statusCode: 400, headers: headers, body: JSON.stringify(result) };
+        }
+        return { statusCode: 200, headers: headers, body: JSON.stringify(result.user) };
+    }
+
+    // 3. GET /login —— 返回配置（前端用来生成授权 URL）
     if (event.httpMethod === 'GET') {
-        headers['Content-Type'] = 'application/json';
         return { statusCode: 200, headers: headers, body: JSON.stringify({
-            app_id: APP_ID,
-            base_url: FEISHU_BASE + '/open-apis/authen/v1/authorize',
+            client_id: APP_ID,
+            base_url: ACCOUNTS_BASE + '/open-apis/authen/v1/authorize',
             redirect_uri: REDIRECT_URI,
+            scope: DEFAULT_SCOPE,
             status: 'ok'
         }) };
     }
