@@ -715,7 +715,7 @@ async function handleSubmitToTable() {
     }
 
     var data = {
-        '项目类型': selectedProject.join('、'),
+        '项目类型': selectedProject,
         '日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '上班日期': { type: 'date', value: convertToBitableDate(startDateText) },
         '下班日期': { type: 'date', value: convertToBitableDate(endDateText) },
