@@ -1087,6 +1087,9 @@ function renderLoginState() {
         // 管理员：显示顶部导航栏的用户信息 + 管理按钮
         const actions = document.getElementById('headerActions');
         if (actions) actions.style.display = 'flex';
+        // 隐藏旧的飞书登录按钮
+        const loginWrap = document.querySelector('.login-btn-wrap');
+        if (loginWrap) loginWrap.style.display = 'none';
         const avatar = document.getElementById('userAvatar');
         const name = document.getElementById('userName');
         const myInput = document.getElementById('myUserIdDisplay');
