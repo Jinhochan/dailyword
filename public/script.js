@@ -967,14 +967,6 @@ function formatTime(date) {
 
 
 // ========== 飞书登录墙（OAuth）==========
-// 流程：
-// 1. 页面加载 → 检查 localStorage 有没有有效登录状态
-// 2. 有 + 是管理员 → 显示 #app
-// 3. 有 + 非管理员 → 显示 #unauthorized
-// 4. 没有 → 自动跳飞书授权页
-// 5. 飞书回调带 code → 调后端 exchange → 存 localStorage → 重定向回干净 URL
-// 6. 第 1 步重跑，这次有状态了
-
 const FEISHU_LOGIN_API = 'https://bespoke-gecko-4ac4c3.netlify.app/.netlify/functions/login';
 const ADMIN_USER_IDS = ['ou_f1bea8fb03ae624d56c5cbc61fb7ca04'];
 const SESSION_TTL = 24 * 3600 * 1000;  // 24 小时
@@ -995,10 +987,15 @@ function setLoginState(u) {
     localStorage.setItem('feishu_login', JSON.stringify(u));
 }
 
-function logout() {
+function clearAllLoginState() {
     localStorage.removeItem('feishu_login');
     localStorage.removeItem('feishu_oauth_state');
+    localStorage.removeItem('feishu_last_error');
     sessionStorage.removeItem('feishu_oauth_state');
+}
+
+function logout() {
+    clearAllLoginState();
     window.location.reload();
 }
 
@@ -1019,21 +1016,77 @@ function showScreen(id) {
     if (el) el.style.display = 'flex';
 }
 
+// 错误页：显示完整诊断，禁止再自动跳飞书
+function showErrorPage(message, detail, diagnosis) {
+    showScreen('unauthorized');
+    
+    // 存错误到 localStorage 方便排查
+    const errInfo = { message: message, detail: detail, diagnosis: diagnosis, at: Date.now() };
+    localStorage.setItem('feishu_last_error', JSON.stringify(errInfo));
+    
+    const uidEl = document.getElementById('unauthUserId');
+    const detailEl = document.getElementById('unauthDetail');
+    const diagEl = document.getElementById('unauthDiag');
+    
+    if (uidEl) uidEl.textContent = message;
+    if (detailEl) {
+        // 提取飞书返回的详细错误
+        let detailText = '';
+        if (detail) {
+            if (detail.error_description) {
+                detailText += '飞书错误: ' + detail.error_description + '\n';
+            }
+            if (detail.error) {
+                detailText += '飞书 error code: ' + detail.error + '\n';
+            }
+            if (detail.code) {
+                detailText += '飞书 code: ' + detail.code + '\n';
+            }
+            if (detail.step) {
+                detailText += '失败步骤: ' + detail.step + '\n';
+            }
+            if (detail.http_status) {
+                detailText += 'HTTP 状态: ' + detail.http_status + '\n';
+            }
+            // 如果以上都没有，原样显示
+            if (!detailText) {
+                detailText = JSON.stringify(detail).slice(0, 500);
+            }
+        }
+        detailEl.textContent = detailText;
+        detailEl.style.display = detailText ? 'block' : 'none';
+    }
+    
+    if (diagEl && diagnosis) {
+        let diagText = 'app_id: ' + (diagnosis.app_id || '(空)') + '\n' +
+                       'app_secret: ' + (diagnosis.app_secret_set ? '✓ (' + diagnosis.app_secret_length + '字符 ' + (diagnosis.app_secret_preview||'') + ')' : '✗ 未设置') + '\n' +
+                       '重定向URI: ' + window.location.origin + '/' + '\n' +
+                       '当前URL: ' + window.location.href.slice(0, 80) + '\n' +
+                       'Node: ' + (diagnosis.node_version || '?');
+        diagEl.textContent = diagText;
+    }
+    
+    // 显示重试按钮
+    const retryBtn = document.getElementById('unauthRetryBtn');
+    if (retryBtn) retryBtn.style.display = 'inline-block';
+}
+
 function renderLoginState() {
     const u = getLoginState();
     if (!u) {
-        // 没登录，跳飞书授权
         redirectToFeishuAuth();
         return;
     }
     if (isAdmin(u.user_id)) {
-        // 管理员，显示打卡内容
         showScreen('app');
     } else {
-        // 非管理员，显示无权限页
         showScreen('unauthorized');
         const uidEl = document.getElementById('unauthUserId');
-        if (uidEl) uidEl.textContent = u.user_id;
+        if (uidEl) uidEl.textContent = '用户 ' + (u.name || u.user_id) + ' 不在授权名单内';
+        const detailEl = document.getElementById('unauthDetail');
+        if (detailEl) detailEl.style.display = 'none';
+        const diagEl = document.getElementById('unauthDiag');
+        if (diagEl) diagEl.textContent = '当前 user_id: ' + u.user_id;
     }
 }
 
@@ -1044,10 +1097,7 @@ async function redirectToFeishuAuth() {
     });
     
     if (!config || !config.client_id) {
-        // 后端配置接口失败，显示错误
-        showScreen('unauthorized');
-        const uidEl = document.getElementById('unauthUserId');
-        if (uidEl) uidEl.textContent = '登录服务暂不可用，请稍后重试';
+        showErrorPage('登录服务暂不可用', null, null);
         return;
     }
     
@@ -1075,60 +1125,58 @@ async function handleCallbackCode() {
     // 校验 state（防 CSRF）
     const savedState = sessionStorage.getItem('feishu_oauth_state');
     if (savedState && state && savedState !== state) {
-        console.error('state mismatch (CSRF):', savedState, 'vs', state);
-        showScreen('unauthorized');
-        const uidEl = document.getElementById('unauthUserId');
-        if (uidEl) uidEl.textContent = '登录状态校验失败，请重试';
+        showErrorPage('登录状态校验失败（可能被 CSRF 攻击）', { error: 'state mismatch' }, null);
         sessionStorage.removeItem('feishu_oauth_state');
-        return true;
+        // 清理 URL
+        window.history.replaceState(null, '', window.location.pathname);
+        return true;  // 不再继续
     }
     sessionStorage.removeItem('feishu_oauth_state');
     
     // 调后端 exchange API
+    let resp, data;
     try {
-        const r = await fetch(FEISHU_LOGIN_API, {
+        resp = await fetch(FEISHU_LOGIN_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: code })
         });
-        
-        if (!r.ok) {
-            const err = await r.json().catch(() => ({}));
-            console.error('login exchange failed', r.status, err);
-            // 显示错误信息
-            showScreen('unauthorized');
-            const uidEl = document.getElementById('unauthUserId');
-            if (uidEl) {
-                const diag = err.diagnosis ? `\n诊断: secret=${err.diagnosis.app_secret_set}(${err.diagnosis.app_secret_length})` : '';
-                uidEl.textContent = `登录失败: ${err.error || r.status}${diag}`;
-            }
-        } else {
-            const u = await r.json();
-            console.log('login success:', u);
-            setLoginState(u);
-        }
+        data = await resp.json().catch(() => ({}));
     } catch(e) {
-        console.error('login exchange error', e);
-        showScreen('unauthorized');
-        const uidEl = document.getElementById('unauthUserId');
-        if (uidEl) uidEl.textContent = '登录出错: ' + e.message;
+        showErrorPage('网络错误，无法连接登录服务', { error: e.message }, null);
+        window.history.replaceState(null, '', window.location.pathname);
+        return true;
     }
     
-    // 清理 URL 里的 code（防泄露）
-    const cleanUrl = window.location.pathname + window.location.hash;
-    window.history.replaceState(null, '', cleanUrl);
+    if (!resp.ok) {
+        // 显示详细错误
+        let msg = '登录失败：' + (data.error || resp.status);
+        showErrorPage(msg, data, data.diagnosis);
+    } else {
+        setLoginState(data);
+    }
+    
+    // 清理 URL 里的 code
+    window.history.replaceState(null, '', window.location.pathname);
     return true;
 }
 
 // ========== 启动流程 ==========
 document.addEventListener('DOMContentLoaded', async () => {
-    // 先隐藏所有屏
     hideAllScreens();
     showScreen('loading');
     
-    // 处理飞书回调 code
     const hadCode = await handleCallbackCode();
     
-    // 渲染登录状态
+    // 如果有 code（无论成功失败），都不要再调 renderLoginState 自动跳飞书
+    if (hadCode) {
+        // 成功的话 renderLoginState 会显示 app
+        // 失败的话 showErrorPage 已经显示了错误页，不要再跳飞书
+        if (getLoginState()) {
+            renderLoginState();
+        }
+        return;
+    }
+    
     renderLoginState();
 });
