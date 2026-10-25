@@ -145,7 +145,10 @@ exports.handler = async function(event, context) {
             message = '打卡信息：\n';
             message += '上班日期：' + (formattedData['日期'] || formattedData.startDate) + '\n';
             if (formattedData.projectType) {
-                message += '\u{1f3eb}项目类型：' + formattedData.projectType + '\n';
+                var pt = Array.isArray(formattedData.projectType)
+                    ? formattedData.projectType.join('、')
+                    : String(formattedData.projectType);
+                message += '\u{1f3eb}项目类型：' + pt + '\n';
             }
             message += '上班时间：' + (formattedData['上班时间'] || formattedData.startTime) + '\n';
             message += '下班时间：' + (formattedData['下班时间'] || formattedData.endTime) + '\n';
