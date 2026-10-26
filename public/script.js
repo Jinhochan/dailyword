@@ -41,14 +41,14 @@ var PROJECT_GROUPS = [
     {
         "group": "学校",
         "items": [
-            "吉华",
-            "龙创",
-            "科技城",
-            "立雪",
             "龙小",
             "教科院",
             "龙岗中专",
             "罗外",
+            "吉华",
+            "龙创",
+            "科技城",
+            "立雪",
             "罗幼",
             "怡景",
             "金翠园",
@@ -219,7 +219,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ============ 项目类型选择（多选） ============
+// ============ 项目类型选择（多选，学校组分页） ============
+
+var SCHOOL_PAGE_SIZE = 4;   // 学校组每页4个，对齐参考图
+var schoolPage = 0;
 
 function getSelectedProjects() {
     var cbs = document.querySelectorAll('input.project-cb:checked');
@@ -236,31 +239,107 @@ function initProjects() {
     for (var g = 0; g < PROJECT_GROUPS.length; g++) {
         var grp = PROJECT_GROUPS[g];
         html += '<div class="project-group">';
+        html += '<div class="project-group-head">';
         html += '<div class="project-group-title">' + grp.group + '</div>';
-        html += '<div class="project-group-items">';
-        for (var i = 0; i < grp.items.length; i++) {
-            var name = grp.items[i];
-            html += '<label class="project-chip"><input type="checkbox" class="project-cb" value="' + name.replace(/"/g, '&quot;') + '"><span>' + name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span></label>';
+        if (grp.group === '学校') {
+            html += '<div class="project-nav">'
+                + '<button type="button" class="proj-page-btn" id="schoolPrev" onclick="navSchoolPage(-1)" aria-label="上一页">‹</button>'
+                + '<span class="proj-page-info" id="schoolPageInfo"></span>'
+                + '<button type="button" class="proj-page-btn" id="schoolNext" onclick="navSchoolPage(1)" aria-label="下一页">›</button>'
+                + '</div>';
         }
         html += '</div>';
+        html += '<div class="project-group-items" id="items-' + grp.group + '"></div>';
         html += '</div>';
     }
     projectGrid.innerHTML = html;
-    var cbs = projectGrid.querySelectorAll('input.project-cb');
+
+    renderInternalItems();
+    renderSchoolPage();
+    updateProjectHint();
+}
+
+function chipHtml(name) {
+    var safe = name.replace(/"/g, '&quot;');
+    var text = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<label class="project-chip"><input type="checkbox" class="project-cb" value="' + safe + '"><span>' + text + '</span></label>';
+}
+
+function bindChips(box) {
+    var cbs = box.querySelectorAll('input.project-cb');
     for (var j = 0; j < cbs.length; j++) {
-        cbs[j].addEventListener('change', function() {
+        cbs[j].addEventListener('change', function () {
             selectedProject = getSelectedProjects();
+            updateChipSelectedClass();
             updateProjectHint();
             saveToLocalStorage();
         });
     }
+}
+
+function updateChipSelectedClass() {
+    if (!projectGrid) return;
+    var chips = projectGrid.querySelectorAll('.project-chip');
+    for (var i = 0; i < chips.length; i++) {
+        var cb = chips[i].querySelector('input.project-cb');
+        if (cb && cb.checked) {
+            chips[i].classList.add('selected');
+        } else {
+            chips[i].classList.remove('selected');
+        }
+    }
+}
+
+function renderInternalItems() {
+    var grp = PROJECT_GROUPS[0];
+    var box = document.getElementById('items-' + grp.group);
+    if (!box) return;
+    var html = '';
+    for (var i = 0; i < grp.items.length; i++) {
+        html += chipHtml(grp.items[i]);
+    }
+    box.innerHTML = html;
+    bindChips(box);
+}
+
+function renderSchoolPage() {
+    var grp = PROJECT_GROUPS[1];
+    var box = document.getElementById('items-' + grp.group);
+    if (!box) return;
+    var total = grp.items.length;
+    var pages = Math.max(1, Math.ceil(total / SCHOOL_PAGE_SIZE));
+    if (schoolPage < 0) schoolPage = 0;
+    if (schoolPage > pages - 1) schoolPage = pages - 1;
+
+    var start = schoolPage * SCHOOL_PAGE_SIZE;
+    var end = Math.min(start + SCHOOL_PAGE_SIZE, total);
+    var html = '';
+    for (var i = start; i < end; i++) {
+        html += chipHtml(grp.items[i]);
+    }
+    box.innerHTML = html;
+    bindChips(box);
+
+    var prev = document.getElementById('schoolPrev');
+    var next = document.getElementById('schoolNext');
+    var info = document.getElementById('schoolPageInfo');
+    if (prev) prev.disabled = (schoolPage <= 0);
+    if (next) next.disabled = (schoolPage >= pages - 1);
+    if (info) info.textContent = (schoolPage + 1) + '/' + pages;
+
+    // 回填已选项（跨页勾选保持）
     if (selectedProject && selectedProject.length) {
         for (var k = 0; k < selectedProject.length; k++) {
-            var cb = projectGrid.querySelector('input.project-cb[value="' + selectedProject[k].replace(/"/g, '&quot;') + '"]');
+            var cb = box.querySelector('input.project-cb[value="' + selectedProject[k].replace(/"/g, '&quot;') + '"]');
             if (cb) cb.checked = true;
         }
     }
-    updateProjectHint();
+    updateChipSelectedClass();
+}
+
+function navSchoolPage(dir) {
+    schoolPage += dir;
+    renderSchoolPage();
 }
 
 function updateProjectHint() {
@@ -664,6 +743,10 @@ async function handleSubmitToGroup() {
         showToast('正在处理中，请稍候', 'info');
         return;
     }
+    if (!getLoginState()) {
+        showToast('请先点击右上角「飞书登录」按钮登录', 'error');
+        return;
+    }
 
     var elements = validateAndGetElements();
     if (!elements) return;
@@ -737,6 +820,10 @@ async function handleSubmitToGroup() {
 async function handleSubmitToTable() {
     if (isSubmitting) {
         showToast('正在处理中，请稍候', 'info');
+        return;
+    }
+    if (!getLoginState()) {
+        showToast('请先点击右上角「飞书登录」按钮登录', 'error');
         return;
     }
 
@@ -1058,7 +1145,9 @@ function hideAllScreens() {
 function showScreen(id) {
     hideAllScreens();
     const el = document.getElementById(id);
-    if (el) el.style.display = 'flex';
+    if (!el) return;
+    // 打卡主界面是纵向单列（block），loading/unauthorized 需要 flex 居中
+    el.style.display = (id === 'app') ? 'block' : 'flex';
 }
 
 // 错误页：显示完整诊断，禁止再自动跳飞书
@@ -1120,18 +1209,22 @@ function showErrorPage(message, detail, diagnosis) {
 
 function renderLoginState() {
     const u = getLoginState();
+    const loginBtn = document.getElementById('loginBtn');
     if (!u) {
-        redirectToFeishuAuth();
+        // 未登录：直接展示打卡界面（对齐参考图），右上角显示飞书登录按钮
+        showScreen('app');
+        if (loginBtn) loginBtn.style.display = 'inline-flex';
+        const actions = document.getElementById('headerActions');
+        if (actions) actions.style.display = 'none';
         return;
     }
+    // 已登录：隐藏登录按钮
+    if (loginBtn) loginBtn.style.display = 'none';
     if (isAdmin(u.user_id)) {
         showScreen('app');
         // 管理员：显示顶部导航栏的用户信息 + 管理按钮
         const actions = document.getElementById('headerActions');
         if (actions) actions.style.display = 'flex';
-        // 隐藏旧的飞书登录按钮
-        const loginWrap = document.querySelector('.login-btn-wrap');
-        if (loginWrap) loginWrap.style.display = 'none';
         // 确保管理菜单默认隐藏
         const adminMenu = document.getElementById('adminMenu');
         if (adminMenu) adminMenu.classList.remove('open');
@@ -1421,11 +1514,8 @@ function toggleTheme() {
 
 function initTheme() {
     const saved = localStorage.getItem('dailyword_theme');
-    if (saved) {
-        document.documentElement.setAttribute('data-theme', saved);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
+    // 默认深色主题（对齐参考图设计），用户可切换
+    document.documentElement.setAttribute('data-theme', saved || 'dark');
 }
 initTheme();
 
