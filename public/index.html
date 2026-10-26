@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#007aff">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261026b">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="app-icon.svg">
     <link rel="icon" type="image/svg+xml" href="app-icon.svg">
@@ -190,14 +190,15 @@
         </section>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20261026b"></script>
     <script>
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         document.getElementById('debugSection').style.display = '';
       }
     </script>
     <script>
-      if ('serviceWorker' in navigator) {
+      // 仅线上环境注册 Service Worker；本地调试（localhost）不注册，避免缓存干扰
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(r) { console.log('SW registered:', r.scope); })

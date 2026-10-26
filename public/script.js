@@ -806,12 +806,9 @@ async function handleSubmitToGroup() {
         if (result.details && result.details.msg) {
             detailMsg = result.details.msg;
         }
-        showToast(detailMsg, 'success');
-        // 标记按钮为已提交状态
-        document.getElementById('submitToGroupBtn').classList.add('submitted');
-        document.getElementById('submitToGroupBtn').textContent = '已发送 ✓';
-        // 检查是否两个目标都已提交
-        checkAllSubmitted();
+        showToast(detailMsg + '，今日数据已清空', 'success');
+        // 提交成功即清空今日数据（页面 + 本地存储），刷新后不再留存
+        clearDataAfterSubmit();
     }
 }
 
@@ -874,21 +871,16 @@ async function handleSubmitToTable() {
         if (result.details && result.details.msg) {
             detailMsg = result.details.msg;
         }
-        showToast(detailMsg, 'success');
-        // 标记按钮为已提交状态
-        document.getElementById('submitToTableBtn').classList.add('submitted');
-        document.getElementById('submitToTableBtn').textContent = '已提交 ✓';
-        // 检查是否两个目标都已提交
-        checkAllSubmitted();
+        showToast(detailMsg + '，今日数据已清空', 'success');
+        // 提交成功即清空今日数据（页面 + 本地存储），刷新后不再留存
+        clearDataAfterSubmit();
     }
 }
 
-function checkAllSubmitted() {
-    if (submittedTargets.group && submittedTargets.table) {
-        // 两个目标都提交成功，清除本地数据
-        localStorage.removeItem('dailyWordData');
-        showToast('所有提交完成！', 'success');
-    }
+function clearDataAfterSubmit() {
+    // 提交成功后：重置页面所有状态，并清空本地存储
+    resetUI();
+    localStorage.removeItem('dailyWordData');
 }
 
 function convertToBitableDate(dateText) {
@@ -1466,34 +1458,14 @@ function clearCheckinData() {
         return;
     }
     
-    // 清除 localStorage 里的打卡数据
+    // 清除 localStorage 里的打卡数据（正确主键 + 旧版本遗留 key 都清，确保刷新后不残留）
+    localStorage.removeItem('dailyWordData');
     localStorage.removeItem('dailyword_checkin_' + getTodayKey());
     localStorage.removeItem('dailyword_checkin_data');
-    
-    // 重置页面显示
-    document.getElementById('startTime').textContent = '--:--';
-    document.getElementById('endTime').textContent = '--:--';
-    document.getElementById('startDate').innerHTML = '&nbsp;';
-    document.getElementById('endDate').innerHTML = '&nbsp;';
-    document.getElementById('durationBar').style.display = 'none';
-    
-    // 重置按钮状态
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('endBtn').disabled = true;
-    document.getElementById('submitToGroupBtn').disabled = true;
-    document.getElementById('submitToTableBtn').disabled = true;
-    
-    // 清空输入框
-    document.getElementById('advanceAmount').value = '';
-    document.getElementById('advancePurpose').value = '';
-    document.getElementById('notes').value = '';
-    document.getElementById('projectSection').classList.remove('active');
-    
-    // 清空消费记录
     localStorage.removeItem('dailyword_advance_' + getTodayKey());
-    if (typeof renderAdvanceList === 'function') {
-        renderAdvanceList();
-    }
+    
+    // 统一重置页面状态（打卡/消费/项目/备注/提交按钮）
+    resetUI();
     
     alert('✅ 已清除今日打卡数据');
 }
