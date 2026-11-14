@@ -35,7 +35,8 @@ var PROJECT_GROUPS = [
             "代购",
             "京东改价",
             "改照片",
-            "报表"
+            "报表",
+            "仓库"
         ]
     },
     {
@@ -59,7 +60,8 @@ var PROJECT_GROUPS = [
             "华景园",
             "龙高",
             "知新",
-            "宝龙外"
+            "宝龙外",
+            "雪象"
         ]
     }
 ];
@@ -224,6 +226,62 @@ document.addEventListener('DOMContentLoaded', function() {
 var SCHOOL_PAGE_SIZE = 4;   // 学校组每页4个，对齐参考图
 var schoolPage = 0;
 
+// ============ 项目使用频率统计（常选的自动排前面） ============
+var PROJECT_RANK_KEY = 'projectUsageRank';
+
+function getProjectRank() {
+    try {
+        var raw = localStorage.getItem(PROJECT_RANK_KEY);
+        var obj = raw ? JSON.parse(raw) : null;
+        return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+// 提交成功后累加使用次数
+function bumpProjectRank(names) {
+    if (!names || !names.length) return;
+    var rank = getProjectRank();
+    var changed = false;
+    for (var i = 0; i < names.length; i++) {
+        var n = (names[i] || '').replace(/^\s+|\s+$/g, '');
+        if (!n) continue;
+        rank[n] = (rank[n] || 0) + 1;
+        changed = true;
+    }
+    if (!changed) return;
+    try {
+        localStorage.setItem(PROJECT_RANK_KEY, JSON.stringify(rank));
+    } catch (e) {
+        console.error('保存项目使用频率失败:', e);
+    }
+}
+
+// 从离线重试数据里取出项目名
+function projectNamesFromOfflineData(data) {
+    if (!data) return [];
+    if (Array.isArray(data['项目类型'])) return data['项目类型'];
+    if (typeof data['项目类型'] === 'string' && data['项目类型']) return data['项目类型'].split(/[、,]/);
+    if (typeof data.projectType === 'string' && data.projectType) return data.projectType.split(/[、,]/);
+    return [];
+}
+
+// 按使用次数降序排序；次数相同保持原有顺序
+function sortItemsByRank(items) {
+    var rank = getProjectRank();
+    var arr = items.slice();
+    var order = {};
+    for (var i = 0; i < arr.length; i++) order[arr[i]] = i;
+    arr.sort(function (a, b) {
+        var ra = rank[a] || 0;
+        var rb = rank[b] || 0;
+        if (rb !== ra) return rb - ra;
+        return order[a] - order[b];
+    });
+    return arr;
+}
+
 function getSelectedProjects() {
     var cbs = document.querySelectorAll('input.project-cb:checked');
     var arr = [];
@@ -294,19 +352,29 @@ function renderInternalItems() {
     var grp = PROJECT_GROUPS[0];
     var box = document.getElementById('items-' + grp.group);
     if (!box) return;
+    var items = sortItemsByRank(grp.items);
     var html = '';
-    for (var i = 0; i < grp.items.length; i++) {
-        html += chipHtml(grp.items[i]);
+    for (var i = 0; i < items.length; i++) {
+        html += chipHtml(items[i]);
     }
     box.innerHTML = html;
     bindChips(box);
+    // 回填已选项
+    if (selectedProject && selectedProject.length) {
+        for (var k = 0; k < selectedProject.length; k++) {
+            var cb = box.querySelector('input.project-cb[value="' + selectedProject[k].replace(/"/g, '&quot;') + '"]');
+            if (cb) cb.checked = true;
+        }
+    }
+    updateChipSelectedClass();
 }
 
 function renderSchoolPage() {
     var grp = PROJECT_GROUPS[1];
     var box = document.getElementById('items-' + grp.group);
     if (!box) return;
-    var total = grp.items.length;
+    var items = sortItemsByRank(grp.items);
+    var total = items.length;
     var pages = Math.max(1, Math.ceil(total / SCHOOL_PAGE_SIZE));
     if (schoolPage < 0) schoolPage = 0;
     if (schoolPage > pages - 1) schoolPage = pages - 1;
@@ -315,7 +383,7 @@ function renderSchoolPage() {
     var end = Math.min(start + SCHOOL_PAGE_SIZE, total);
     var html = '';
     for (var i = start; i < end; i++) {
-        html += chipHtml(grp.items[i]);
+        html += chipHtml(items[i]);
     }
     box.innerHTML = html;
     bindChips(box);
@@ -558,6 +626,8 @@ async function handleRetryOfflineQueue() {
                 if (result.success) {
                     localStorage.removeItem(item._key);
                     successCount++;
+                    // 离线重试成功也算一次使用，累加频率
+                    bumpProjectRank(projectNamesFromOfflineData(item.data));
                 } else {
                     failCount++;
                 }
@@ -878,9 +948,14 @@ async function handleSubmitToTable() {
 }
 
 function clearDataAfterSubmit() {
+    // 记录本次使用的项目类型，用于"常选的自动排前面"
+    bumpProjectRank(selectedProject);
     // 提交成功后：重置页面所有状态，并清空本地存储
     resetUI();
     localStorage.removeItem('dailyWordData');
+    // 按最新使用频率重新排列项目列表
+    schoolPage = 0;
+    initProjects();
 }
 
 function convertToBitableDate(dateText) {
