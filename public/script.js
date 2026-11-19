@@ -25,46 +25,14 @@ let endDateTime = null;
 // 消费记录数组
 let advanceRecords = [];
 
-// 项目类型清单（分组：内部 / 学校）
-var PROJECT_GROUPS = [
-    {
-        "group": "内部",
-        "items": [
-            "送礼",
-            "电信",
-            "代购",
-            "京东改价",
-            "改照片",
-            "报表",
-            "仓库"
-        ]
-    },
-    {
-        "group": "学校",
-        "items": [
-            "龙小",
-            "教科院",
-            "龙岗中专",
-            "罗外",
-            "吉华",
-            "龙创",
-            "科技城",
-            "立雪",
-            "罗幼",
-            "怡景",
-            "金翠园",
-            "粤海城",
-            "平湖",
-            "道远",
-            "龙初",
-            "华景园",
-            "龙高",
-            "知新",
-            "宝龙外",
-            "雪象"
-        ]
-    }
+// 项目类型清单（动态数据源：从飞书多维表格「项目类型」字段的选项自动读取）
+// 下表只是网络/接口不可用时的兜底默认值，正常以飞书表的选项为准，增删自动同步
+var DEFAULT_PROJECT_ITEMS = [
+    "送礼", "电信", "代购", "京东改价", "改照片", "报表", "仓库", "采购", "gpt",
+    "龙小", "教科院", "龙岗中专", "罗外", "吉华", "龙创", "科技城", "立雪", "罗幼",
+    "怡景", "金翠园", "粤海城", "平湖", "道远", "龙初", "华景园", "龙高", "知新", "宝龙外", "雪象"
 ];
+var projectItems = DEFAULT_PROJECT_ITEMS.slice();
 
 // 已选项目类型（数组，多选）
 let selectedProject = [];
@@ -196,8 +164,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 初始化项目类型选择器（多选）
+    // 初始化项目类型选择器（多选）：先用本地缓存/默认值渲染，再异步拉取飞书最新选项
+    var cachedItems = loadCachedProjectItems();
+    if (cachedItems) projectItems = cachedItems;
+    // 清理掉当前列表里已不存在的已选项（例如飞书表里已删除的选项）
+    var prevSelectedCount = (selectedProject || []).length;
+    selectedProject = sanitizeSelectedProjects(selectedProject);
+    if (selectedProject.length !== prevSelectedCount) saveToLocalStorage();
     initProjects();
+    refreshProjectTypesFromRemote();
 
     // 渲染消费列表
     renderAdvanceList();
@@ -221,10 +196,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ============ 项目类型选择（多选，学校组分页） ============
+// ============ 项目类型选择（多选，单列表按使用频率排序 + 分页） ============
 
-var SCHOOL_PAGE_SIZE = 4;   // 学校组每页4个，对齐参考图
-var schoolPage = 0;
+var PROJECT_PAGE_SIZE = 8;   // 每页 8 个，常用的排前面
+var projectPage = 0;
 
 // ============ 项目使用频率统计（常选的自动排前面） ============
 var PROJECT_RANK_KEY = 'projectUsageRank';
@@ -283,37 +258,48 @@ function sortItemsByRank(items) {
 }
 
 function getSelectedProjects() {
-    var cbs = document.querySelectorAll('input.project-cb:checked');
-    var arr = [];
+    // 以内存中已选项为基础（兼容分页跨页勾选），再叠加当前页复选框的变化
+    var result = selectedProject ? selectedProject.slice() : [];
+    var cbs = document.querySelectorAll('input.project-cb');
     for (var i = 0; i < cbs.length; i++) {
-        arr.push(cbs[i].value);
+        var v = cbs[i].value;
+        var idx = result.indexOf(v);
+        if (cbs[i].checked) {
+            if (idx === -1) result.push(v);
+        } else if (idx > -1) {
+            result.splice(idx, 1);
+        }
     }
-    return arr;
+    return result;
+}
+
+// 过滤掉当前项目类型列表里已不存在的项（飞书里删掉的选项不再提交，避免接口报错）
+function sanitizeSelectedProjects(arr) {
+    var valid = [];
+    if (!arr || !arr.length) return valid;
+    for (var i = 0; i < arr.length; i++) {
+        var n = arr[i];
+        if (projectItems.indexOf(n) > -1 && valid.indexOf(n) === -1) valid.push(n);
+    }
+    return valid;
 }
 
 function initProjects() {
     if (!projectGrid) return;
-    var html = '';
-    for (var g = 0; g < PROJECT_GROUPS.length; g++) {
-        var grp = PROJECT_GROUPS[g];
-        html += '<div class="project-group">';
-        html += '<div class="project-group-head">';
-        html += '<div class="project-group-title">' + grp.group + '</div>';
-        if (grp.group === '学校') {
-            html += '<div class="project-nav">'
-                + '<button type="button" class="proj-page-btn" id="schoolPrev" onclick="navSchoolPage(-1)" aria-label="上一页">‹</button>'
-                + '<span class="proj-page-info" id="schoolPageInfo"></span>'
-                + '<button type="button" class="proj-page-btn" id="schoolNext" onclick="navSchoolPage(1)" aria-label="下一页">›</button>'
-                + '</div>';
-        }
-        html += '</div>';
-        html += '<div class="project-group-items" id="items-' + grp.group + '"></div>';
-        html += '</div>';
-    }
+    var html = '<div class="project-group">'
+        + '<div class="project-group-head">'
+        + '<div class="project-group-title">全部（常用优先）</div>'
+        + '<div class="project-nav">'
+        + '<button type="button" class="proj-page-btn" id="projPrev" onclick="navProjectPage(-1)" aria-label="上一页">‹</button>'
+        + '<span class="proj-page-info" id="projPageInfo"></span>'
+        + '<button type="button" class="proj-page-btn" id="projNext" onclick="navProjectPage(1)" aria-label="下一页">›</button>'
+        + '</div>'
+        + '</div>'
+        + '<div class="project-group-items" id="items-all"></div>'
+        + '</div>';
     projectGrid.innerHTML = html;
 
-    renderInternalItems();
-    renderSchoolPage();
+    renderProjectPage();
     updateProjectHint();
 }
 
@@ -348,39 +334,17 @@ function updateChipSelectedClass() {
     }
 }
 
-function renderInternalItems() {
-    var grp = PROJECT_GROUPS[0];
-    var box = document.getElementById('items-' + grp.group);
+function renderProjectPage() {
+    var box = document.getElementById('items-all');
     if (!box) return;
-    var items = sortItemsByRank(grp.items);
-    var html = '';
-    for (var i = 0; i < items.length; i++) {
-        html += chipHtml(items[i]);
-    }
-    box.innerHTML = html;
-    bindChips(box);
-    // 回填已选项
-    if (selectedProject && selectedProject.length) {
-        for (var k = 0; k < selectedProject.length; k++) {
-            var cb = box.querySelector('input.project-cb[value="' + selectedProject[k].replace(/"/g, '&quot;') + '"]');
-            if (cb) cb.checked = true;
-        }
-    }
-    updateChipSelectedClass();
-}
-
-function renderSchoolPage() {
-    var grp = PROJECT_GROUPS[1];
-    var box = document.getElementById('items-' + grp.group);
-    if (!box) return;
-    var items = sortItemsByRank(grp.items);
+    var items = sortItemsByRank(projectItems);
     var total = items.length;
-    var pages = Math.max(1, Math.ceil(total / SCHOOL_PAGE_SIZE));
-    if (schoolPage < 0) schoolPage = 0;
-    if (schoolPage > pages - 1) schoolPage = pages - 1;
+    var pages = Math.max(1, Math.ceil(total / PROJECT_PAGE_SIZE));
+    if (projectPage < 0) projectPage = 0;
+    if (projectPage > pages - 1) projectPage = pages - 1;
 
-    var start = schoolPage * SCHOOL_PAGE_SIZE;
-    var end = Math.min(start + SCHOOL_PAGE_SIZE, total);
+    var start = projectPage * PROJECT_PAGE_SIZE;
+    var end = Math.min(start + PROJECT_PAGE_SIZE, total);
     var html = '';
     for (var i = start; i < end; i++) {
         html += chipHtml(items[i]);
@@ -388,12 +352,12 @@ function renderSchoolPage() {
     box.innerHTML = html;
     bindChips(box);
 
-    var prev = document.getElementById('schoolPrev');
-    var next = document.getElementById('schoolNext');
-    var info = document.getElementById('schoolPageInfo');
-    if (prev) prev.disabled = (schoolPage <= 0);
-    if (next) next.disabled = (schoolPage >= pages - 1);
-    if (info) info.textContent = (schoolPage + 1) + '/' + pages;
+    var prev = document.getElementById('projPrev');
+    var next = document.getElementById('projNext');
+    var info = document.getElementById('projPageInfo');
+    if (prev) prev.disabled = (projectPage <= 0);
+    if (next) next.disabled = (projectPage >= pages - 1);
+    if (info) info.textContent = (projectPage + 1) + '/' + pages;
 
     // 回填已选项（跨页勾选保持）
     if (selectedProject && selectedProject.length) {
@@ -405,9 +369,74 @@ function renderSchoolPage() {
     updateChipSelectedClass();
 }
 
-function navSchoolPage(dir) {
-    schoolPage += dir;
-    renderSchoolPage();
+function navProjectPage(dir) {
+    projectPage += dir;
+    renderProjectPage();
+}
+
+// ============ 项目类型动态数据源（飞书多维表格「项目类型」字段选项） ============
+
+var PROJECT_TYPES_CACHE_KEY = 'projectTypesCache';
+
+function getProjectTypesApiUrl() {
+    if (window.location.hostname.indexOf('.netlify.app') > -1) {
+        return '/.netlify/functions/project-types';
+    }
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return window.location.protocol + '//' + window.location.hostname + ':' + (window.location.port || 3000) + '/.netlify/functions/project-types';
+    }
+    return 'http://localhost:3000/.netlify/functions/project-types';
+}
+
+function loadCachedProjectItems() {
+    try {
+        var raw = localStorage.getItem(PROJECT_TYPES_CACHE_KEY);
+        var obj = raw ? JSON.parse(raw) : null;
+        if (obj && Array.isArray(obj.options) && obj.options.length) {
+            var arr = [];
+            for (var i = 0; i < obj.options.length; i++) {
+                var n = (obj.options[i] || '').replace(/^\s+|\s+$/g, '');
+                if (n && arr.indexOf(n) === -1) arr.push(n);
+            }
+            if (arr.length) return arr;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function saveCachedProjectItems(items) {
+    try {
+        localStorage.setItem(PROJECT_TYPES_CACHE_KEY, JSON.stringify({ options: items, updatedAt: new Date().toISOString() }));
+    } catch (e) {}
+}
+
+// 从飞书表读取最新选项；失败时保留本地缓存/默认值
+async function refreshProjectTypesFromRemote() {
+    try {
+        var resp = await fetch(getProjectTypesApiUrl() + '?t=' + Date.now());
+        if (!resp.ok) {
+            console.warn('读取项目类型失败，状态码:', resp.status);
+            return;
+        }
+        var data = await resp.json();
+        if (data && data.success && Array.isArray(data.options) && data.options.length) {
+            projectItems = data.options;
+            saveCachedProjectItems(projectItems);
+            // 同步清理掉飞书里已删除的选项（含已勾选状态）
+            var cleaned = sanitizeSelectedProjects(selectedProject);
+            if (cleaned.length !== (selectedProject || []).length) {
+                selectedProject = cleaned;
+                saveToLocalStorage();
+                showToast('部分已选项目类型已被删除，已自动移除', 'info');
+            }
+            projectPage = 0;
+            initProjects();
+        } else if (data && !data.success) {
+            console.warn('读取项目类型失败:', data.error || data.message || '未知错误');
+        }
+    } catch (e) {
+        console.warn('读取项目类型异常，使用本地缓存:', e);
+    }
 }
 
 function updateProjectHint() {
@@ -820,6 +849,8 @@ async function handleSubmitToGroup() {
 
     var elements = validateAndGetElements();
     if (!elements) return;
+    // 过滤掉飞书表里已删除的项目类型，避免提交不存在的选项报错
+    selectedProject = sanitizeSelectedProjects(selectedProject);
     if (!selectedProject || !selectedProject.length) {
         showToast('请先选择项目类型', 'error');
         if (projectGrid) projectGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -896,6 +927,8 @@ async function handleSubmitToTable() {
 
     var elements = validateAndGetElements();
     if (!elements) return;
+    // 过滤掉飞书表里已删除的项目类型，避免提交不存在的选项报错
+    selectedProject = sanitizeSelectedProjects(selectedProject);
     if (!selectedProject || !selectedProject.length) {
         showToast('请先选择项目类型', 'error');
         if (projectGrid) projectGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -954,7 +987,7 @@ function clearDataAfterSubmit() {
     resetUI();
     localStorage.removeItem('dailyWordData');
     // 按最新使用频率重新排列项目列表
-    schoolPage = 0;
+    projectPage = 0;
     initProjects();
 }
 
